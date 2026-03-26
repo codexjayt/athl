@@ -837,9 +837,16 @@ window.updateTotals = function() {
     document.getElementById('totalGarments').innerText = rows.length;
     
     // Player count: only non‑empty surnames
-    const uniqueSurnames = new Set();
-    rows.forEach(r => { const sur = r.querySelector('.surname')?.value; if (sur && sur.trim() !== '') uniqueSurnames.add(sur); });
-    document.getElementById('totalPlayers').innerText = uniqueSurnames.size;
+    const uniquePlayers = new Set();
+rows.forEach(r => {
+    const surname = r.querySelector('.surname')?.value;
+    const number = r.querySelector('.number')?.value;
+    if (surname && surname.trim() !== '') {
+        const key = `${surname.trim()}|${number?.trim() || ''}`;
+        uniquePlayers.add(key);
+    }
+});
+document.getElementById('totalPlayers').innerText = uniquePlayers.size;
     
     document.getElementById('subTotal').innerText = '₱' + subTotal.toFixed(2);
     document.getElementById('totalPrice').innerText = '₱' + totalAfterDiscount.toFixed(2);
