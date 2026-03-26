@@ -3,6 +3,13 @@ const supabaseUrl = 'https://ypjlkheimduflarwxusl.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwamxraGVpbWR1Zmxhcnd4dXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTIxMzcsImV4cCI6MjA5MDA4ODEzN30.noJduEXx2kZ1r2tF6CuCWqnUzmOFM0wh1hrTnfl2xzE';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+// Access control – set from window variable (set in index.html)
+let currentAccessLevel = window.currentAccessLevel;
+
+function isFullAccess() {
+    return currentAccessLevel === 'full';
+}
+
 let orders = [];
 let settings = {
     fabric: [{ name: 'Mesh', price: 0 }, { name: 'Polyester', price: 0 }],
@@ -58,7 +65,6 @@ async function loadData() {
         .eq('id', 1)
         .single();
     if (!settingsError && settingsData) {
-        // Map snake_case to camelCase
         settings = {
             fabric: settingsData.fabric,
             jerseyType: settingsData.jersey_type,
@@ -67,14 +73,12 @@ async function loadData() {
         };
     } else {
         console.error(settingsError);
-        // keep default settings (already set above)
     }
     refreshAllDisplays();
 }
 
 async function saveOrders() {
     for (const order of orders) {
-        // Map camelCase to snake_case
         const dbOrder = {
             id: order.id,
             customer: order.customer,
@@ -133,11 +137,26 @@ function updateDashboard() {
     document.getElementById('statCompleted').innerText = orders.filter(o => o.status === 'completed').length;
 }
 
-// ---------- Order Card Rendering ----------
+// ---------- Order Card Rendering (with access control) ----------
 function renderOrderCard(order, status) {
-    const actionBtn = status === 'tofile' ? `<button class="action-order-btn" onclick="event.stopPropagation(); confirmStatusChange('${order.id}', 'progress')"><i class="fas fa-play"></i> Start</button>` : (status === 'progress' ? `<button class="action-order-btn" onclick="event.stopPropagation(); confirmStatusChange('${order.id}', 'completed')"><i class="fas fa-check"></i> Complete</button>` : '');
+    // Action buttons (Start/Complete) only for full access
+    let actionBtn = '';
+    if (isFullAccess()) {
+        if (status === 'tofile') {
+            actionBtn = `<button class="action-order-btn" onclick="event.stopPropagation(); confirmStatusChange('${order.id}', 'progress')"><i class="fas fa-play"></i> Start</button>`;
+        } else if (status === 'progress') {
+            actionBtn = `<button class="action-order-btn" onclick="event.stopPropagation(); confirmStatusChange('${order.id}', 'completed')"><i class="fas fa-check"></i> Complete</button>`;
+        }
+    }
+
+    // Edit button only for full access
+    const editBtn = isFullAccess() 
+        ? `<button class="edit-order-btn" onclick="event.stopPropagation(); openEditOrderModal('${order.id}')"><i class="fas fa-pencil-alt"></i> Edit</button>`
+        : '';
+
     const thumb = order.designImage ? `<img src="${order.designImage}" class="order-image-thumb" alt="design">` : '';
     const discountBadge = order.discountAmount > 0 ? `<span class="discount-badge" style="font-size:0.6rem; margin-left:0.5rem;">-₱${order.discountAmount}</span>` : '';
+
     return `<div class="order-card" onclick="openOrderModal('${order.id}')">
         <div style="display:flex; align-items:center; gap:12px;">
             ${thumb}
@@ -156,13 +175,17 @@ function renderOrderCard(order, status) {
         </div>
         <div class="flex-btns">
             <button class="print-receipt-btn" onclick="event.stopPropagation(); showReceiptPreview('${order.id}')"><i class="fas fa-download"></i> Receipt (JPG)</button>
-            <button class="edit-order-btn" onclick="event.stopPropagation(); openEditOrderModal('${order.id}')"><i class="fas fa-pencil-alt"></i> Edit</button>
+            ${editBtn}
             ${actionBtn}
         </div>
     </div>`;
 }
 
 async function confirmStatusChange(orderId, newStatus) {
+    if (!isFullAccess()) {
+        alert('View‑only mode: you cannot change order status.');
+        return;
+    }
     const msg = newStatus === 'progress' ? 'Move this order to IN PROGRESS?' : 'Mark this order as COMPLETED?';
     if (confirm(msg)) {
         await changeOrderStatus(orderId, newStatus);
@@ -197,7 +220,7 @@ function renderRecentOrders() {
     `).join('');
 }
 
-// ---------- Order Detail Modal (unchanged but uses async save) ----------
+// ---------- Order Detail Modal ----------
 function openOrderModal(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
@@ -212,13 +235,13 @@ function openOrderModal(orderId) {
 
     const garmentRowsHtml = sorted.map(g => `
         <tr class="garment-row">
-            <td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span>    </td>
-            <td>${escapeHtml(g.surname) || '—'}    </td>
-            <td>${escapeHtml(g.number) || '—'}    </td>
-            <td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span>    </td>
-            <td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span>    </td>
-            <td class="notes-cell">${escapeHtml(g.notes) || '—'}    </td>
-         </tr>
+            <td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span>     </td>
+            <td>${escapeHtml(g.surname) || '—'}     </td>
+            <td>${escapeHtml(g.number) || '—'}     </td>
+            <td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span>     </td>
+            <td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span>     </td>
+            <td class="notes-cell">${escapeHtml(g.notes) || '—'}     </td>
+          </tr>
     `).join('');
 
     const designHtml = order.designImage ? `
@@ -332,7 +355,7 @@ function openOrderModal(orderId) {
                     <table class="garments-modal-table">
                         <thead>汽<th>Type</th><th>Surname</th><th>#</th><th>Upper</th><th>Lower</th><th>Notes</th> </thead>
                         <tbody>${garmentRowsHtml}</tbody>
-                     </table>
+                    </table>
                 </div>
             </div>
 
@@ -352,7 +375,7 @@ function openOrderModal(orderId) {
 
             <div class="modal-actions">
                 <button class="btn-receipt" onclick="event.stopPropagation(); document.getElementById('orderModal').classList.add('hidden'); showReceiptPreview('${order.id}');"><i class="fas fa-download"></i> Download Receipt (JPG)</button>
-                <button class="btn-edit" onclick="event.stopPropagation(); document.getElementById('orderModal').classList.add('hidden'); openEditOrderModal('${order.id}');"><i class="fas fa-pencil-alt"></i> Edit Order</button>
+                ${isFullAccess() ? `<button class="btn-edit" onclick="event.stopPropagation(); document.getElementById('orderModal').classList.add('hidden'); openEditOrderModal('${order.id}');"><i class="fas fa-pencil-alt"></i> Edit Order</button>` : ''}
             </div>
         </div>
     `;
@@ -376,8 +399,12 @@ function openOrderModal(orderId) {
     }, 50);
 }
 
-// ---------- Edit Order Modal (garment types preserved, discount amount only) ----------
+// ---------- Edit Order Modal (only for full access) ----------
 function openEditOrderModal(orderId) {
+    if (!isFullAccess()) {
+        alert('View‑only mode: you cannot edit orders.');
+        return;
+    }
     const order = orders.find(o => o.id === orderId);
     if(!order) return;
     const modalDiv = document.getElementById('editOrderFormContainer');
@@ -607,7 +634,15 @@ function renderEditForm(order, container, onSaveCallback) {
         order.totalPrice = totalPriceCalc;
         order.amountPaid = amountPaid;
         order.balanceDue = totalPriceCalc - amountPaid;
-        order.totalPlayers = new Set(updatedGarments.map(g=>g.surname).filter(s => s && s.trim() !== '')).size;
+        // Players count using surname+number
+        const uniquePlayers = new Set();
+        updatedGarments.forEach(g => {
+            if (g.surname && g.surname.trim() !== '') {
+                const key = `${g.surname.trim()}|${g.number?.trim() || ''}`;
+                uniquePlayers.add(key);
+            }
+        });
+        order.totalPlayers = uniquePlayers.size;
         order.totalGarments = updatedGarments.length;
         order.notes = document.getElementById('editNotes').value;
 
@@ -836,17 +871,17 @@ window.updateTotals = function() {
     document.getElementById('balanceDue').innerText = '₱' + balance.toFixed(2);
     document.getElementById('totalGarments').innerText = rows.length;
     
-    // Player count: only non‑empty surnames
+    // Player count: surname + number
     const uniquePlayers = new Set();
-rows.forEach(r => {
-    const surname = r.querySelector('.surname')?.value;
-    const number = r.querySelector('.number')?.value;
-    if (surname && surname.trim() !== '') {
-        const key = `${surname.trim()}|${number?.trim() || ''}`;
-        uniquePlayers.add(key);
-    }
-});
-document.getElementById('totalPlayers').innerText = uniquePlayers.size;
+    rows.forEach(r => {
+        const surname = r.querySelector('.surname')?.value;
+        const number = r.querySelector('.number')?.value;
+        if (surname && surname.trim() !== '') {
+            const key = `${surname.trim()}|${number?.trim() || ''}`;
+            uniquePlayers.add(key);
+        }
+    });
+    document.getElementById('totalPlayers').innerText = uniquePlayers.size;
     
     document.getElementById('subTotal').innerText = '₱' + subTotal.toFixed(2);
     document.getElementById('totalPrice').innerText = '₱' + totalAfterDiscount.toFixed(2);
@@ -960,6 +995,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadData();
     populateDropdowns();
     renderSettingsEditor();
+    
+    // Hide settings tab if view‑only
+    if (!isFullAccess()) {
+        const settingsNav = document.querySelector('.nav-item[data-tab="settings"]');
+        if (settingsNav) settingsNav.style.display = 'none';
+    }
+    
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('dateStarted').value = today;
     setupNewOrderImage();
@@ -968,13 +1010,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tbody = document.getElementById('garmentsBody');
         const row = document.createElement('tr');
         const defaultOptions = settings.garmentType.map(gt=>`<option value="${gt.name}" data-price="${gt.price}">${gt.name}</option>`).join('') + '<option value="Jersey">Jersey (dynamic)</option><option value="Custom">Custom</option>';
-        row.innerHTML = `   <td><select class="garment-select">${defaultOptions}</select></td>
-                            <td><input type="text" class="surname"></td>
-                            <td><input type="text" class="number"></td>
-                            <td><input type="text" class="upper-size"></td>
-                            <td><input type="text" class="lower-size"></td>
-                            <td><input type="text" class="notes"></td>
-                            <td><i class="fas fa-times remove-row"></i></td>`;
+        row.innerHTML = `    <td><select class="garment-select">${defaultOptions}</select></td>
+                             <td><input type="text" class="surname"></td>
+                             <td><input type="text" class="number"></td>
+                             <td><input type="text" class="upper-size"></td>
+                             <td><input type="text" class="lower-size"></td>
+                             <td><input type="text" class="notes"></td>
+                             <td><i class="fas fa-times remove-row"></i></td>`;
         tbody.appendChild(row);
         row.querySelector('.remove-row').onclick = () => { row.remove(); updateTotals(); };
         row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', updateTotals));
