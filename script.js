@@ -23,7 +23,29 @@ async function loadData() {
         .from('orders')
         .select('*');
     if (!ordersError && ordersData) {
-        orders = ordersData;
+        // Map snake_case to camelCase
+        orders = ordersData.map(order => ({
+            id: order.id,
+            customer: order.customer,
+            dateStarted: order.date_started,
+            dateRelease: order.date_release,
+            fabric: order.fabric,
+            jerseyType: order.jersey_type,
+            lowerType: order.lower_type,
+            garments: order.garments,
+            totalPlayers: order.total_players,
+            totalGarments: order.total_garments,
+            subTotal: order.sub_total,
+            discountAmount: order.discount_amount,
+            discountValue: order.discount_value,
+            totalPrice: order.total_price,
+            amountPaid: order.amount_paid,
+            balanceDue: order.balance_due,
+            notes: order.notes,
+            status: order.status,
+            createdAt: order.created_at,
+            designImage: order.design_image
+        }));
     } else {
         orders = [];
         console.error(ordersError);
@@ -36,6 +58,7 @@ async function loadData() {
         .eq('id', 1)
         .single();
     if (!settingsError && settingsData) {
+        // Map snake_case to camelCase
         settings = {
             fabric: settingsData.fabric,
             jerseyType: settingsData.jersey_type,
@@ -43,34 +66,57 @@ async function loadData() {
             garmentType: settingsData.garment_type
         };
     } else {
-        // Keep default settings (already set above)
         console.error(settingsError);
+        // keep default settings (already set above)
     }
     refreshAllDisplays();
 }
 
 async function saveOrders() {
-    // Upsert all orders (insert or update)
     for (const order of orders) {
+        // Map camelCase to snake_case
+        const dbOrder = {
+            id: order.id,
+            customer: order.customer,
+            date_started: order.dateStarted,
+            date_release: order.dateRelease,
+            fabric: order.fabric,
+            jersey_type: order.jerseyType,
+            lower_type: order.lowerType,
+            garments: order.garments,
+            total_players: order.totalPlayers,
+            total_garments: order.totalGarments,
+            sub_total: order.subTotal,
+            discount_amount: order.discountAmount,
+            discount_value: order.discountValue,
+            total_price: order.totalPrice,
+            amount_paid: order.amountPaid,
+            balance_due: order.balanceDue,
+            notes: order.notes,
+            status: order.status,
+            created_at: order.createdAt,
+            design_image: order.designImage
+        };
         const { error } = await supabaseClient
             .from('orders')
-            .upsert(order, { onConflict: 'id' });
+            .upsert(dbOrder, { onConflict: 'id' });
         if (error) console.error('Error saving order:', error);
     }
     refreshAllDisplays();
 }
 
 async function saveSettings() {
+    const dbSettings = {
+        id: 1,
+        fabric: settings.fabric,
+        jersey_type: settings.jerseyType,
+        lower_type: settings.lowerType,
+        garment_type: settings.garmentType,
+        updated_at: new Date()
+    };
     const { error } = await supabaseClient
         .from('settings')
-        .upsert({
-            id: 1,
-            fabric: settings.fabric,
-            jersey_type: settings.jerseyType,
-            lower_type: settings.lowerType,
-            garment_type: settings.garmentType,
-            updated_at: new Date()
-        });
+        .upsert(dbSettings);
     if (!error) {
         populateDropdowns();
         renderSettingsEditor();
@@ -166,12 +212,12 @@ function openOrderModal(orderId) {
 
     const garmentRowsHtml = sorted.map(g => `
         <tr class="garment-row">
-            <td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span>   </td>
-            <td>${escapeHtml(g.surname) || '—'}   </td>
-            <td>${escapeHtml(g.number) || '—'}   </td>
-            <td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span>   </td>
-            <td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span>   </td>
-            <td class="notes-cell">${escapeHtml(g.notes) || '—'}   </td>
+            <td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span>    </td>
+            <td>${escapeHtml(g.surname) || '—'}    </td>
+            <td>${escapeHtml(g.number) || '—'}    </td>
+            <td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span>    </td>
+            <td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span>    </td>
+            <td class="notes-cell">${escapeHtml(g.notes) || '—'}    </td>
          </tr>
     `).join('');
 
@@ -365,14 +411,14 @@ function renderEditForm(order, container, onSaveCallback) {
         const customPriceField = (g.garmentType === 'Custom') ? 
             `<input type="number" class="custom-price-edit" data-idx="${idx}" value="${g.customPrice || 0}" placeholder="Price" style="margin-top:5px; width:100%; background:#1e2a36; border:1px solid #f97316; border-radius:12px; padding:0.4rem;">` : '';
         garmentsHtml += `<tr data-gidx="${idx}">
-               <td><select class="edit-garment-type" data-idx="${idx}">${selectOptions}</select>${customPriceField}</td>
-               <td><input type="text" class="edit-surname" data-idx="${idx}" value="${escapeHtml(g.surname)}"></td>
-               <td><input type="text" class="edit-number" data-idx="${idx}" value="${escapeHtml(g.number)}"></td>
-               <td><input type="text" class="edit-upper" data-idx="${idx}" value="${escapeHtml(g.upperSize)}"></td>
-               <td><input type="text" class="edit-lower" data-idx="${idx}" value="${escapeHtml(g.lowerSize)}"></td>
-               <td><input type="text" class="edit-notes" data-idx="${idx}" value="${escapeHtml(g.notes)}"></td>
-               <td><i class="fas fa-trash remove-row" data-removeidx="${idx}"></i></td>
-           </tr>`;
+                <td><select class="edit-garment-type" data-idx="${idx}">${selectOptions}</select>${customPriceField}</td>
+                <td><input type="text" class="edit-surname" data-idx="${idx}" value="${escapeHtml(g.surname)}"></td>
+                <td><input type="text" class="edit-number" data-idx="${idx}" value="${escapeHtml(g.number)}"></td>
+                <td><input type="text" class="edit-upper" data-idx="${idx}" value="${escapeHtml(g.upperSize)}"></td>
+                <td><input type="text" class="edit-lower" data-idx="${idx}" value="${escapeHtml(g.lowerSize)}"></td>
+                <td><input type="text" class="edit-notes" data-idx="${idx}" value="${escapeHtml(g.notes)}"></td>
+                <td><i class="fas fa-trash remove-row" data-removeidx="${idx}"></i></td>
+            </tr>`;
     });
     const designPreview = order.designImage ? `<img src="${order.designImage}" style="max-width:150px; border-radius:12px;">` : '<span style="color:#94a3b8;">No design uploaded</span>';
     const formHtml = `
@@ -447,13 +493,13 @@ function renderEditForm(order, container, onSaveCallback) {
         const newRow = document.createElement('tr');
         const defaultOptions = buildGarmentSelectOptions('Jersey');
         newRow.innerHTML = `
-               <td><select class="edit-garment-type">${defaultOptions}</select></td>
-               <td><input type="text" class="edit-surname"></td>
-               <td><input type="text" class="edit-number"></td>
-               <td><input type="text" class="edit-upper"></td>
-               <td><input type="text" class="edit-lower"></td>
-               <td><input type="text" class="edit-notes"></td>
-               <td><i class="fas fa-times remove-row"></i></td>`;
+                <td><select class="edit-garment-type">${defaultOptions}</select></td>
+                <td><input type="text" class="edit-surname"></td>
+                <td><input type="text" class="edit-number"></td>
+                <td><input type="text" class="edit-upper"></td>
+                <td><input type="text" class="edit-lower"></td>
+                <td><input type="text" class="edit-notes"></td>
+                <td><i class="fas fa-times remove-row"></i></td>`;
         tbody.appendChild(newRow);
         const sel = newRow.querySelector('.edit-garment-type');
         sel.onchange = () => {
@@ -579,7 +625,7 @@ function renderEditForm(order, container, onSaveCallback) {
     calculateEditTotals();
 }
 
-// ---------- Receipt Preview & Download (unchanged but with dark text) ----------
+// ---------- Receipt Preview & Download ----------
 let currentReceiptOrderId = null;
 let currentReceiptElement = null;
 
@@ -803,7 +849,7 @@ window.updateTotals = function() {
     window.currentDiscountAmount = discountAmount;
 };
 
-// ---------- Export / Import (still works with local data, but we adapt) ----------
+// ---------- Export / Import ----------
 async function exportAllTeams() {
     const teams = [...new Set(orders.map(o=>o.customer))];
     if(teams.length===0) { alert('No teams to export'); return; }
@@ -915,13 +961,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tbody = document.getElementById('garmentsBody');
         const row = document.createElement('tr');
         const defaultOptions = settings.garmentType.map(gt=>`<option value="${gt.name}" data-price="${gt.price}">${gt.name}</option>`).join('') + '<option value="Jersey">Jersey (dynamic)</option><option value="Custom">Custom</option>';
-        row.innerHTML = `  <td><select class="garment-select">${defaultOptions}</select></td>
-                           <td><input type="text" class="surname"></td>
-                           <td><input type="text" class="number"></td>
-                           <td><input type="text" class="upper-size"></td>
-                           <td><input type="text" class="lower-size"></td>
-                           <td><input type="text" class="notes"></td>
-                           <td><i class="fas fa-times remove-row"></i></td>`;
+        row.innerHTML = `   <td><select class="garment-select">${defaultOptions}</select></td>
+                            <td><input type="text" class="surname"></td>
+                            <td><input type="text" class="number"></td>
+                            <td><input type="text" class="upper-size"></td>
+                            <td><input type="text" class="lower-size"></td>
+                            <td><input type="text" class="notes"></td>
+                            <td><i class="fas fa-times remove-row"></i></td>`;
         tbody.appendChild(row);
         row.querySelector('.remove-row').onclick = () => { row.remove(); updateTotals(); };
         row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', updateTotals));
