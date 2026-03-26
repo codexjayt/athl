@@ -1,9 +1,0 @@
-{
-  "name": "brix-athl",
-  "version": "1.0.0",
-  "description": "Garment order system",
-  "main": "index.html",
-  "scripts": {
-    "start": "serve ."
-  }
-}
