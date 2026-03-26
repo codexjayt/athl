@@ -1,7 +1,7 @@
 // Supabase configuration
 const supabaseUrl = 'https://ypjlkheimduflarwxusl.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwamxraGVpbWR1Zmxhcnd4dXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTIxMzcsImV4cCI6MjA5MDA4ODEzN30.noJduEXx2kZ1r2tF6CuCWqnUzmOFM0wh1hrTnfl2xzE';
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 let orders = [];
 let settings = {
@@ -19,7 +19,7 @@ function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, func
 // ---------- Data Persistence (Supabase) ----------
 async function loadData() {
     // Load orders
-    const { data: ordersData, error: ordersError } = await supabase
+    const { data: ordersData, error: ordersError } = await supabaseClient
         .from('orders')
         .select('*');
     if (!ordersError && ordersData) {
@@ -30,7 +30,7 @@ async function loadData() {
     }
 
     // Load settings (single row)
-    const { data: settingsData, error: settingsError } = await supabase
+    const { data: settingsData, error: settingsError } = await supabaseClient
         .from('settings')
         .select('*')
         .eq('id', 1)
@@ -52,7 +52,7 @@ async function loadData() {
 async function saveOrders() {
     // Upsert all orders (insert or update)
     for (const order of orders) {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('orders')
             .upsert(order, { onConflict: 'id' });
         if (error) console.error('Error saving order:', error);
@@ -61,7 +61,7 @@ async function saveOrders() {
 }
 
 async function saveSettings() {
-    const { error } = await supabase
+    const { error } = await supabaseClient
         .from('settings')
         .upsert({
             id: 1,
@@ -166,12 +166,12 @@ function openOrderModal(orderId) {
 
     const garmentRowsHtml = sorted.map(g => `
         <tr class="garment-row">
-            <td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span>  </td>
-            <td>${escapeHtml(g.surname) || '—'}  </td>
-            <td>${escapeHtml(g.number) || '—'}  </td>
-            <td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span>  </td>
-            <td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span>  </td>
-            <td class="notes-cell">${escapeHtml(g.notes) || '—'}  </td>
+            <td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span>   </td>
+            <td>${escapeHtml(g.surname) || '—'}   </td>
+            <td>${escapeHtml(g.number) || '—'}   </td>
+            <td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span>   </td>
+            <td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span>   </td>
+            <td class="notes-cell">${escapeHtml(g.notes) || '—'}   </td>
          </tr>
     `).join('');
 
@@ -286,7 +286,7 @@ function openOrderModal(orderId) {
                     <table class="garments-modal-table">
                         <thead>汽<th>Type</th><th>Surname</th><th>#</th><th>Upper</th><th>Lower</th><th>Notes</th> </thead>
                         <tbody>${garmentRowsHtml}</tbody>
-                    </table>
+                     </table>
                 </div>
             </div>
 
@@ -365,14 +365,14 @@ function renderEditForm(order, container, onSaveCallback) {
         const customPriceField = (g.garmentType === 'Custom') ? 
             `<input type="number" class="custom-price-edit" data-idx="${idx}" value="${g.customPrice || 0}" placeholder="Price" style="margin-top:5px; width:100%; background:#1e2a36; border:1px solid #f97316; border-radius:12px; padding:0.4rem;">` : '';
         garmentsHtml += `<tr data-gidx="${idx}">
-              <td><select class="edit-garment-type" data-idx="${idx}">${selectOptions}</select>${customPriceField}</td>
-              <td><input type="text" class="edit-surname" data-idx="${idx}" value="${escapeHtml(g.surname)}"></td>
-              <td><input type="text" class="edit-number" data-idx="${idx}" value="${escapeHtml(g.number)}"></td>
-              <td><input type="text" class="edit-upper" data-idx="${idx}" value="${escapeHtml(g.upperSize)}"></td>
-              <td><input type="text" class="edit-lower" data-idx="${idx}" value="${escapeHtml(g.lowerSize)}"></td>
-              <td><input type="text" class="edit-notes" data-idx="${idx}" value="${escapeHtml(g.notes)}"></td>
-              <td><i class="fas fa-trash remove-row" data-removeidx="${idx}"></i></td>
-          </tr>`;
+               <td><select class="edit-garment-type" data-idx="${idx}">${selectOptions}</select>${customPriceField}</td>
+               <td><input type="text" class="edit-surname" data-idx="${idx}" value="${escapeHtml(g.surname)}"></td>
+               <td><input type="text" class="edit-number" data-idx="${idx}" value="${escapeHtml(g.number)}"></td>
+               <td><input type="text" class="edit-upper" data-idx="${idx}" value="${escapeHtml(g.upperSize)}"></td>
+               <td><input type="text" class="edit-lower" data-idx="${idx}" value="${escapeHtml(g.lowerSize)}"></td>
+               <td><input type="text" class="edit-notes" data-idx="${idx}" value="${escapeHtml(g.notes)}"></td>
+               <td><i class="fas fa-trash remove-row" data-removeidx="${idx}"></i></td>
+           </tr>`;
     });
     const designPreview = order.designImage ? `<img src="${order.designImage}" style="max-width:150px; border-radius:12px;">` : '<span style="color:#94a3b8;">No design uploaded</span>';
     const formHtml = `
@@ -447,13 +447,13 @@ function renderEditForm(order, container, onSaveCallback) {
         const newRow = document.createElement('tr');
         const defaultOptions = buildGarmentSelectOptions('Jersey');
         newRow.innerHTML = `
-              <td><select class="edit-garment-type">${defaultOptions}</select></td>
-              <td><input type="text" class="edit-surname"></td>
-              <td><input type="text" class="edit-number"></td>
-              <td><input type="text" class="edit-upper"></td>
-              <td><input type="text" class="edit-lower"></td>
-              <td><input type="text" class="edit-notes"></td>
-              <td><i class="fas fa-times remove-row"></i></td>`;
+               <td><select class="edit-garment-type">${defaultOptions}</select></td>
+               <td><input type="text" class="edit-surname"></td>
+               <td><input type="text" class="edit-number"></td>
+               <td><input type="text" class="edit-upper"></td>
+               <td><input type="text" class="edit-lower"></td>
+               <td><input type="text" class="edit-notes"></td>
+               <td><i class="fas fa-times remove-row"></i></td>`;
         tbody.appendChild(newRow);
         const sel = newRow.querySelector('.edit-garment-type');
         sel.onchange = () => {
@@ -886,7 +886,7 @@ function renderSettingsEditor() {
 async function resetAllData() {
     if (!confirm('Delete ALL orders and reset settings to default?')) return;
     // Delete all orders
-    const { error: deleteError } = await supabase.from('orders').delete().neq('id', '');
+    const { error: deleteError } = await supabaseClient.from('orders').delete().neq('id', '');
     if (deleteError) console.error(deleteError);
     // Reset settings to default
     settings = {
@@ -915,13 +915,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tbody = document.getElementById('garmentsBody');
         const row = document.createElement('tr');
         const defaultOptions = settings.garmentType.map(gt=>`<option value="${gt.name}" data-price="${gt.price}">${gt.name}</option>`).join('') + '<option value="Jersey">Jersey (dynamic)</option><option value="Custom">Custom</option>';
-        row.innerHTML = ` <td><select class="garment-select">${defaultOptions}</select></td>
-                          <td><input type="text" class="surname"></td>
-                          <td><input type="text" class="number"></td>
-                          <td><input type="text" class="upper-size"></td>
-                          <td><input type="text" class="lower-size"></td>
-                          <td><input type="text" class="notes"></td>
-                          <td><i class="fas fa-times remove-row"></i></td>`;
+        row.innerHTML = `  <td><select class="garment-select">${defaultOptions}</select></td>
+                           <td><input type="text" class="surname"></td>
+                           <td><input type="text" class="number"></td>
+                           <td><input type="text" class="upper-size"></td>
+                           <td><input type="text" class="lower-size"></td>
+                           <td><input type="text" class="notes"></td>
+                           <td><i class="fas fa-times remove-row"></i></td>`;
         tbody.appendChild(row);
         row.querySelector('.remove-row').onclick = () => { row.remove(); updateTotals(); };
         row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', updateTotals));
