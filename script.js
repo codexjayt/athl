@@ -174,7 +174,6 @@ function renderOrderCard(order, status) {
             </div>
         </div>
         <div class="flex-btns">
-            <button class="print-receipt-btn" onclick="event.stopPropagation(); showReceiptPreview('${order.id}')"><i class="fas fa-download"></i> Receipt (JPG)</button>
             ${editBtn}
             ${actionBtn}
         </div>
