@@ -109,6 +109,7 @@
         window.location.href = 'index.html';
     }
 
+    // Full access button click handler
     document.getElementById('fullAccessBtn').addEventListener('click', () => {
         const password = document.getElementById('passwordInput').value;
         if (password === FULL_PASSWORD) {
@@ -118,8 +119,17 @@
         }
     });
 
+    // View only button click handler
     document.getElementById('viewOnlyBtn').addEventListener('click', () => {
         setAccessAndRedirect('view');
+    });
+
+    // Pressing Enter in the password field triggers full access (with password check)
+    document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('fullAccessBtn').click();
+        }
     });
 </script>
 </body>
