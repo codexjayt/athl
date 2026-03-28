@@ -177,36 +177,29 @@ function showContextMenu(e, orderId, status) {
     const nextItem = document.getElementById('contextNext');
     const backItem = document.getElementById('contextBack');
 
-    // Configure menu based on status
+    // Configure menu based on status (only three statuses)
     if (status === 'tofile') {
         editItem.style.display = 'block';
         nextItem.style.display = 'block';
-        nextItem.innerText = '→ To Print';
+        nextItem.innerText = '→ Start';
         backItem.style.display = 'none';
-    } else if (status === 'toprint') {
-        editItem.style.display = 'block';
-        nextItem.style.display = 'block';
-        nextItem.innerText = 'Start';
-        backItem.style.display = 'block';
-        backItem.innerText = '← Back to File';
     } else if (status === 'progress') {
         editItem.style.display = 'block';
         nextItem.style.display = 'block';
         nextItem.innerText = 'Complete';
         backItem.style.display = 'block';
-        backItem.innerText = '← Back to Print';
+        backItem.innerText = '← Back to File';
     } else if (status === 'completed') {
         editItem.style.display = 'block';
         nextItem.style.display = 'none';
         backItem.style.display = 'none';
     }
 
-    // Position menu near mouse
-    menu.style.left = e.pageX + 'px';
-    menu.style.top = e.pageY + 'px';
+    // Position menu exactly at cursor
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
     menu.style.display = 'block';
 }
-
 // Hide menu on click elsewhere
 document.addEventListener('click', () => {
     document.getElementById('contextMenu').style.display = 'none';
@@ -226,8 +219,7 @@ document.getElementById('contextEdit').addEventListener('click', () => {
 document.getElementById('contextNext').addEventListener('click', () => {
     if (currentContextOrderId && currentContextStatus) {
         let newStatus = null;
-        if (currentContextStatus === 'tofile') newStatus = 'toprint';
-        else if (currentContextStatus === 'toprint') newStatus = 'progress';
+        if (currentContextStatus === 'tofile') newStatus = 'progress';
         else if (currentContextStatus === 'progress') newStatus = 'completed';
         if (newStatus) confirmStatusChange(currentContextOrderId, newStatus);
     }
@@ -235,11 +227,8 @@ document.getElementById('contextNext').addEventListener('click', () => {
 });
 
 document.getElementById('contextBack').addEventListener('click', () => {
-    if (currentContextOrderId && currentContextStatus) {
-        let newStatus = null;
-        if (currentContextStatus === 'toprint') newStatus = 'tofile';
-        else if (currentContextStatus === 'progress') newStatus = 'toprint';
-        if (newStatus) confirmStatusChange(currentContextOrderId, newStatus);
+    if (currentContextOrderId && currentContextStatus === 'progress') {
+        confirmStatusChange(currentContextOrderId, 'tofile');
     }
     document.getElementById('contextMenu').style.display = 'none';
 });
@@ -249,7 +238,10 @@ async function confirmStatusChange(orderId, newStatus) {
         alert('View‑only mode: you cannot change order status.');
         return;
     }
-    const msg = newStatus === 'progress' ? 'Move this order to IN PROGRESS?' : (newStatus === 'toprint' ? 'Mark as ready to print?' : 'Mark this order as COMPLETED?');
+    let msg = '';
+    if (newStatus === 'progress') msg = 'Move this order to IN PROGRESS?';
+    else if (newStatus === 'completed') msg = 'Mark this order as COMPLETED?';
+    else if (newStatus === 'tofile') msg = 'Move this order back to TO FILE?';
     if (confirm(msg)) {
         await changeOrderStatus(orderId, newStatus);
     }
