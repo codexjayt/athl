@@ -30,7 +30,6 @@ async function loadData() {
         .from('orders')
         .select('*');
     if (!ordersError && ordersData) {
-        // Map snake_case to camelCase
         orders = ordersData.map(order => ({
             id: order.id,
             customer: order.customer,
@@ -133,11 +132,19 @@ function refreshAllDisplays() { updateDashboard(); renderOrdersByStatus(); rende
 
 function updateDashboard() {
     document.getElementById('statToFile').innerText = orders.filter(o => o.status === 'tofile').length;
+    document.getElementById('statToPrint').innerText = orders.filter(o => o.status === 'toprint').length;
     document.getElementById('statProgress').innerText = orders.filter(o => o.status === 'progress').length;
     document.getElementById('statCompleted').innerText = orders.filter(o => o.status === 'completed').length;
 }
 
-// ---------- Order Card Rendering (no buttons – right‑click only) ----------
+function getStatusDisplay(status) {
+    if (status === 'tofile') return 'TO FILE';
+    if (status === 'toprint') return 'TO PRINT';
+    if (status === 'progress') return 'IN PROGRESS';
+    return 'COMPLETED';
+}
+
+// ---------- Order Card Rendering ----------
 function renderOrderCard(order, status) {
     const thumb = order.designImage ? `<img src="${order.designImage}" class="order-image-thumb" alt="design">` : '';
     const discountBadge = order.discountAmount > 0 ? `<span class="discount-badge" style="font-size:0.6rem; margin-left:0.5rem;">-₱${order.discountAmount}</span>` : '';
@@ -148,7 +155,7 @@ function renderOrderCard(order, status) {
             <div>
                 <div class="order-title">
                     ${escapeHtml(order.customer)}
-                    <span class="status-badge ${status}">${status === 'tofile' ? 'TO FILE' : status === 'progress' ? 'IN PROGRESS' : 'COMPLETED'}</span>
+                    <span class="status-badge ${status}">${getStatusDisplay(status)}</span>
                     ${discountBadge}
                 </div>
                 <div style="margin-top:0.5rem; color:#b9c7d9;">${order.totalGarments} garments · ${order.totalPlayers} players</div>
@@ -167,39 +174,49 @@ let currentContextStatus = null;
 
 function showContextMenu(e, orderId, status) {
     e.preventDefault();
-    if (!isFullAccess()) return; // only full access gets menu
+    if (!isFullAccess()) return;
 
     currentContextOrderId = orderId;
     currentContextStatus = status;
 
     const menu = document.getElementById('contextMenu');
     const editItem = document.getElementById('contextEdit');
-    const nextItem = document.getElementById('contextNext');
-    const backItem = document.getElementById('contextBack');
+    const moveToPrint = document.getElementById('contextMoveToPrint');
+    const moveToProgress = document.getElementById('contextMoveToProgress');
+    const moveToCompleted = document.getElementById('contextMoveToCompleted');
+    const deleteOrder = document.getElementById('contextDeleteOrder');
 
-    // Configure menu based on status (only three statuses)
+    // Configure menu based on status
     if (status === 'tofile') {
         editItem.style.display = 'block';
-        nextItem.style.display = 'block';
-        nextItem.innerText = '→ Start';
-        backItem.style.display = 'none';
+        moveToPrint.style.display = 'block';
+        moveToProgress.style.display = 'none';
+        moveToCompleted.style.display = 'none';
+    } else if (status === 'toprint') {
+        editItem.style.display = 'block';
+        moveToPrint.style.display = 'none';
+        moveToProgress.style.display = 'block';
+        moveToCompleted.style.display = 'none';
     } else if (status === 'progress') {
         editItem.style.display = 'block';
-        nextItem.style.display = 'block';
-        nextItem.innerText = 'Complete';
-        backItem.style.display = 'block';
-        backItem.innerText = '← Back to File';
+        moveToPrint.style.display = 'none';
+        moveToProgress.style.display = 'none';
+        moveToCompleted.style.display = 'block';
     } else if (status === 'completed') {
         editItem.style.display = 'block';
-        nextItem.style.display = 'none';
-        backItem.style.display = 'none';
+        moveToPrint.style.display = 'none';
+        moveToProgress.style.display = 'none';
+        moveToCompleted.style.display = 'none';
     }
 
-    // Position menu exactly at cursor
+    // Delete order always shown for full access
+    deleteOrder.style.display = 'block';
+
     menu.style.left = e.clientX + 'px';
     menu.style.top = e.clientY + 'px';
     menu.style.display = 'block';
 }
+
 // Hide menu on click elsewhere
 document.addEventListener('click', () => {
     document.getElementById('contextMenu').style.display = 'none';
@@ -216,32 +233,44 @@ document.getElementById('contextEdit').addEventListener('click', () => {
     document.getElementById('contextMenu').style.display = 'none';
 });
 
-document.getElementById('contextNext').addEventListener('click', () => {
-    if (currentContextOrderId && currentContextStatus) {
-        let newStatus = null;
-        if (currentContextStatus === 'tofile') newStatus = 'progress';
-        else if (currentContextStatus === 'progress') newStatus = 'completed';
-        if (newStatus) confirmStatusChange(currentContextOrderId, newStatus);
+document.getElementById('contextMoveToPrint').addEventListener('click', () => {
+    if (currentContextOrderId && currentContextStatus === 'tofile') {
+        confirmStatusChange(currentContextOrderId, 'toprint');
     }
     document.getElementById('contextMenu').style.display = 'none';
 });
 
-document.getElementById('contextBack').addEventListener('click', () => {
+document.getElementById('contextMoveToProgress').addEventListener('click', () => {
+    if (currentContextOrderId && currentContextStatus === 'toprint') {
+        confirmStatusChange(currentContextOrderId, 'progress');
+    }
+    document.getElementById('contextMenu').style.display = 'none';
+});
+
+document.getElementById('contextMoveToCompleted').addEventListener('click', () => {
     if (currentContextOrderId && currentContextStatus === 'progress') {
-        confirmStatusChange(currentContextOrderId, 'tofile');
+        confirmStatusChange(currentContextOrderId, 'completed');
     }
     document.getElementById('contextMenu').style.display = 'none';
 });
 
+document.getElementById('contextDeleteOrder').addEventListener('click', () => {
+    if (currentContextOrderId) {
+        deleteOrder(currentContextOrderId);
+    }
+    document.getElementById('contextMenu').style.display = 'none';
+});
+
+// ---------- Status Change ----------
 async function confirmStatusChange(orderId, newStatus) {
     if (!isFullAccess()) {
         alert('View‑only mode: you cannot change order status.');
         return;
     }
     let msg = '';
-    if (newStatus === 'progress') msg = 'Move this order to IN PROGRESS?';
+    if (newStatus === 'toprint') msg = 'Move this order to TO PRINT?';
+    else if (newStatus === 'progress') msg = 'Move this order to IN PROGRESS?';
     else if (newStatus === 'completed') msg = 'Mark this order as COMPLETED?';
-    else if (newStatus === 'tofile') msg = 'Move this order back to TO FILE?';
     if (confirm(msg)) {
         await changeOrderStatus(orderId, newStatus);
     }
@@ -254,27 +283,86 @@ async function changeOrderStatus(orderId, newStatus) {
         await saveOrders();
     }
 }
+
+// ---------- Delete Order ----------
+async function deleteOrder(orderId) {
+    if (!isFullAccess()) {
+        alert('View‑only mode: you cannot delete orders.');
+        return;
+    }
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    if (!confirm(`Delete order for "${order.customer}"? This action is permanent.`)) return;
+
+    // Remove from local array
+    orders = orders.filter(o => o.id !== orderId);
+
+    // Delete from Supabase
+    const { error } = await supabaseClient
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+    if (error) {
+        console.error('Error deleting order:', error);
+        alert('Failed to delete order. Please try again.');
+        await loadData(); // restore
+        return;
+    }
+    await saveOrders();
+    alert('✅ Order deleted.');
+}
+
+// ---------- Render Functions ----------
 function renderOrdersByStatus() {
-    // We have three statuses: tofile, toprint, progress, completed
-    // We only have tabs for tofile, progress, completed. For simplicity, we'll keep tofile and move toprint into the same tab? Actually user wanted a "To Progress" tab with two sections. But for now we'll keep existing structure.
-    ['tofile','progress','completed'].forEach(st => {
+    // For the combined tab "To Progress"
+    const tofileOrders = orders.filter(o => o.status === 'tofile');
+    const toprintOrders = orders.filter(o => o.status === 'toprint');
+    const tofileGrid = document.getElementById('tofileOrdersGrid');
+    const toprintGrid = document.getElementById('toprintOrdersGrid');
+    const tofileEmpty = document.getElementById('tofileEmpty');
+    const toprintEmpty = document.getElementById('toprintEmpty');
+
+    if (tofileOrders.length === 0) {
+        if (tofileGrid) tofileGrid.innerHTML = '';
+        if (tofileEmpty) tofileEmpty.classList.remove('hidden');
+    } else {
+        if (tofileEmpty) tofileEmpty.classList.add('hidden');
+        if (tofileGrid) tofileGrid.innerHTML = tofileOrders.map(o => renderOrderCard(o, 'tofile')).join('');
+    }
+
+    if (toprintOrders.length === 0) {
+        if (toprintGrid) toprintGrid.innerHTML = '';
+        if (toprintEmpty) toprintEmpty.classList.remove('hidden');
+    } else {
+        if (toprintEmpty) toprintEmpty.classList.add('hidden');
+        if (toprintGrid) toprintGrid.innerHTML = toprintOrders.map(o => renderOrderCard(o, 'toprint')).join('');
+    }
+
+    // Progress and Completed tabs
+    ['progress', 'completed'].forEach(st => {
         const filtered = orders.filter(o => o.status === st);
         const grid = document.getElementById(`${st}OrdersGrid`);
         const emptyDiv = document.getElementById(`${st}Empty`);
-        if(filtered.length===0) { if(grid) grid.innerHTML=''; if(emptyDiv) emptyDiv.classList.remove('hidden'); }
-        else { if(emptyDiv) emptyDiv.classList.add('hidden'); if(grid) grid.innerHTML = filtered.map(o => renderOrderCard(o, st)).join(''); }
+        if (filtered.length === 0) {
+            if (grid) grid.innerHTML = '';
+            if (emptyDiv) emptyDiv.classList.remove('hidden');
+        } else {
+            if (emptyDiv) emptyDiv.classList.add('hidden');
+            if (grid) grid.innerHTML = filtered.map(o => renderOrderCard(o, st)).join('');
+        }
     });
 }
+
 function renderRecentOrders() {
-    const recent = [...orders].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+    const recent = [...orders]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
     const container = document.getElementById('recentOrdersList');
-    if(!recent.length) { container.innerHTML='<div class="empty-state">No orders yet</div>'; return; }
-    container.innerHTML = recent.map(order => `
-        <div onclick="openOrderModal('${order.id}')" style="display:flex; justify-content:space-between; align-items:center; padding:1rem; background:rgba(0,0,0,0.3); border-radius:16px; cursor:pointer; margin-bottom:0.5rem;">
-            <div><strong style="color:#fff;">${escapeHtml(order.customer)}</strong><div style="font-size:0.8rem; color:#b9c7d9;">${order.totalGarments} garments · ₱${order.totalPrice.toFixed(2)}</div></div>
-            <span class="status-badge ${order.status}">${order.status === 'tofile' ? 'TO FILE' : order.status === 'progress' ? 'IN PROGRESS' : 'COMPLETED'}</span>
-        </div>
-    `).join('');
+    if (!recent.length) {
+        container.innerHTML = '<div class="empty-state">No orders yet</div>';
+        return;
+    }
+    container.innerHTML = recent.map(order => renderOrderCard(order, order.status)).join('');
 }
 
 // ---------- Order Detail Modal ----------
@@ -292,12 +380,12 @@ function openOrderModal(orderId) {
 
     const garmentRowsHtml = sorted.map(g => `
         <tr class="garment-row">
-            <td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span>      </td>
-            <td>${escapeHtml(g.surname) || '—'}      </td>
-            <td>${escapeHtml(g.number) || '—'}      </td>
-            <td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span>      </td>
-            <td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span>      </td>
-            <td class="notes-cell">${escapeHtml(g.notes) || '—'}      </td>
+            <td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span>       </td>
+            <td>${escapeHtml(g.surname) || '—'}       </td>
+            <td>${escapeHtml(g.number) || '—'}       </td>
+            <td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span>       </td>
+            <td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span>       </td>
+            <td class="notes-cell">${escapeHtml(g.notes) || '—'}       </td>
           </tr>
     `).join('');
 
@@ -412,7 +500,7 @@ function openOrderModal(orderId) {
                     <table class="garments-modal-table">
                         <thead>汽<th>Type</th><th>Surname</th><th>#</th><th>Upper</th><th>Lower</th><th>Notes</th> </thead>
                         <tbody>${garmentRowsHtml}</tbody>
-                    </table>
+                      </table>
                 </div>
             </div>
 
@@ -495,14 +583,14 @@ function renderEditForm(order, container, onSaveCallback) {
         const customPriceField = (g.garmentType === 'Custom') ? 
             `<input type="number" class="custom-price-edit" data-idx="${idx}" value="${g.customPrice || 0}" placeholder="Price" style="margin-top:5px; width:100%; background:#1e2a36; border:1px solid #f97316; border-radius:12px; padding:0.4rem;">` : '';
         garmentsHtml += `<tr data-gidx="${idx}">
-                 <td><select class="edit-garment-type" data-idx="${idx}">${selectOptions}</select>${customPriceField}</td>
-                 <td><input type="text" class="edit-surname" data-idx="${idx}" value="${escapeHtml(g.surname)}"></td>
-                 <td><input type="text" class="edit-number" data-idx="${idx}" value="${escapeHtml(g.number)}"></td>
-                 <td><input type="text" class="edit-upper" data-idx="${idx}" value="${escapeHtml(g.upperSize)}"></td>
-                 <td><input type="text" class="edit-lower" data-idx="${idx}" value="${escapeHtml(g.lowerSize)}"></td>
-                 <td><input type="text" class="edit-notes" data-idx="${idx}" value="${escapeHtml(g.notes)}"></td>
-                 <td><i class="fas fa-trash remove-row" data-removeidx="${idx}"></i></td>
-             </tr>`;
+                  <td><select class="edit-garment-type" data-idx="${idx}">${selectOptions}</select>${customPriceField}</td>
+                  <td><input type="text" class="edit-surname" data-idx="${idx}" value="${escapeHtml(g.surname)}"></td>
+                  <td><input type="text" class="edit-number" data-idx="${idx}" value="${escapeHtml(g.number)}"></td>
+                  <td><input type="text" class="edit-upper" data-idx="${idx}" value="${escapeHtml(g.upperSize)}"></td>
+                  <td><input type="text" class="edit-lower" data-idx="${idx}" value="${escapeHtml(g.lowerSize)}"></td>
+                  <td><input type="text" class="edit-notes" data-idx="${idx}" value="${escapeHtml(g.notes)}"></td>
+                  <td><i class="fas fa-trash remove-row" data-removeidx="${idx}"></i></td>
+              </tr>`;
     });
     const designPreview = order.designImage ? `<img src="${order.designImage}" style="max-width:150px; border-radius:12px;">` : '<span style="color:#94a3b8;">No design uploaded</span>';
     const formHtml = `
@@ -577,13 +665,13 @@ function renderEditForm(order, container, onSaveCallback) {
         const newRow = document.createElement('tr');
         const defaultOptions = buildGarmentSelectOptions('Jersey');
         newRow.innerHTML = `
-                 <td><select class="edit-garment-type">${defaultOptions}</select></td>
-                 <td><input type="text" class="edit-surname"></td>
-                 <td><input type="text" class="edit-number"></td>
-                 <td><input type="text" class="edit-upper"></td>
-                 <td><input type="text" class="edit-lower"></td>
-                 <td><input type="text" class="edit-notes"></td>
-                 <td><i class="fas fa-times remove-row"></i></td>`;
+                  <td><select class="edit-garment-type">${defaultOptions}</select></td>
+                  <td><input type="text" class="edit-surname"></td>
+                  <td><input type="text" class="edit-number"></td>
+                  <td><input type="text" class="edit-upper"></td>
+                  <td><input type="text" class="edit-lower"></td>
+                  <td><input type="text" class="edit-notes"></td>
+                  <td><i class="fas fa-times remove-row"></i></td>`;
         tbody.appendChild(newRow);
         const sel = newRow.querySelector('.edit-garment-type');
         sel.onchange = () => {
@@ -948,7 +1036,7 @@ window.updateTotals = function() {
     window.currentDiscountAmount = discountAmount;
 };
 
-// ---------- Export / Import (only Export All Teams and Import Team Orders) ----------
+// ---------- Export / Import ----------
 async function exportAllTeams() {
     const teams = [...new Set(orders.map(o=>o.customer))];
     if(teams.length===0) { alert('No teams to export'); return; }
@@ -1052,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tbody = document.getElementById('garmentsBody');
         const row = document.createElement('tr');
         const defaultOptions = settings.garmentType.map(gt=>`<option value="${gt.name}" data-price="${gt.price}">${gt.name}</option>`).join('') + '<option value="Jersey">Jersey (dynamic)</option><option value="Custom">Custom</option>';
-        row.innerHTML = `     <td><select class="garment-select">${defaultOptions}</select></td>
+        row.innerHTML = `      <td><select class="garment-select">${defaultOptions}</select></td>
                               <td><input type="text" class="surname"></td>
                               <td><input type="text" class="number"></td>
                               <td><input type="text" class="upper-size"></td>
@@ -1123,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTotals();
             document.getElementById('designImagePreview').innerHTML = '';
             document.getElementById('designImageInput').value = '';
-            switchTab('tofile');
+            switchTab('toprogress');
             alert('Order created');
         };
         
@@ -1184,7 +1272,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderSettingsEditor();
         }
     });
-    // Removed Export Master and Import Master handlers
     document.getElementById('resetDataBtn').onclick = resetAllData;
     document.getElementById('closeModal').onclick = () => document.getElementById('orderModal').classList.add('hidden');
     document.getElementById('closeModalBtn').onclick = () => document.getElementById('orderModal').classList.add('hidden');
@@ -1197,14 +1284,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('exportAllTeamsBtn').onclick = exportAllTeams;
     document.getElementById('importTeamOrdersBtn').onclick = importTeamOrders;
-    // Removed export summary button handler
 
     window.switchTab = (tabId) => {
         document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
         document.querySelector(`.nav-item[data-tab="${tabId}"]`).classList.add('active');
-        Object.values({dashboard:document.getElementById('tab-dashboard'),new:document.getElementById('tab-new'),tofile:document.getElementById('tab-tofile'),progress:document.getElementById('tab-progress'),completed:document.getElementById('tab-completed'),settings:document.getElementById('tab-settings')}).forEach(t=>t.classList.add('hidden'));
+        const tabs = {
+            dashboard: document.getElementById('tab-dashboard'),
+            new: document.getElementById('tab-new'),
+            toprogress: document.getElementById('tab-toprogress'),
+            progress: document.getElementById('tab-progress'),
+            completed: document.getElementById('tab-completed'),
+            settings: document.getElementById('tab-settings')
+        };
+        Object.values(tabs).forEach(t => t.classList.add('hidden'));
         document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-        if(tabId==='tofile'||tabId==='progress'||tabId==='completed') renderOrdersByStatus();
+        if (tabId === 'toprogress' || tabId === 'progress' || tabId === 'completed') {
+            renderOrdersByStatus();
+        }
     };
     document.querySelectorAll('.nav-item').forEach(item=>{ item.addEventListener('click',()=>switchTab(item.dataset.tab)); });
     refreshAllDisplays();
