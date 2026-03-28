@@ -29,7 +29,7 @@
             border-radius: 12px;
             padding: 0.5rem 0;
             z-index: 9999;
-            min-width: 140px;
+            min-width: 160px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         .context-menu-item {
@@ -49,7 +49,7 @@
     <div class="nav-header">
         <div class="nav-item active" data-tab="dashboard"><i class="fas fa-home"></i> Dashboard</div>
         <div class="nav-item" data-tab="new"><i class="fas fa-plus-circle"></i> New Order</div>
-        <div class="nav-item" data-tab="tofile"><i class="fas fa-folder-open"></i> To File</div>
+        <div class="nav-item" data-tab="toprogress"><i class="fas fa-folder-open"></i> To Progress</div>
         <div class="nav-item" data-tab="progress"><i class="fas fa-chart-line"></i> In Progress</div>
         <div class="nav-item" data-tab="completed"><i class="fas fa-check-circle"></i> Completed</div>
         <div class="nav-spacer"></div>
@@ -64,6 +64,7 @@
         </div>
         <div class="dashboard-stats">
             <div class="stat-card"><div class="stat-header"><span class="stat-title">To File</span><i class="fas fa-folder-open stat-icon"></i></div><div class="stat-value" id="statToFile">0</div></div>
+            <div class="stat-card"><div class="stat-header"><span class="stat-title">To Print</span><i class="fas fa-print stat-icon"></i></div><div class="stat-value" id="statToPrint">0</div></div>
             <div class="stat-card"><div class="stat-header"><span class="stat-title">In Progress</span><i class="fas fa-chart-line stat-icon"></i></div><div class="stat-value" id="statProgress">0</div></div>
             <div class="stat-card"><div class="stat-header"><span class="stat-title">Completed</span><i class="fas fa-check-circle stat-icon"></i></div><div class="stat-value" id="statCompleted">0</div></div>
         </div>
@@ -135,17 +136,36 @@
         </div>
     </div>
 
-    <!-- Status Tabs -->
-    <div id="tab-tofile" class="tab-content hidden"><div class="section-header"><h2 style="color:#fff;"><i class="fas fa-folder-open"></i> To File</h2></div><div id="tofileOrdersGrid" class="orders-grid"></div><div id="tofileEmpty" class="empty-state hidden">No orders in To File</div></div>
-    <div id="tab-progress" class="tab-content hidden"><div class="section-header"><h2 style="color:#fff;"><i class="fas fa-chart-line"></i> In Progress</h2></div><div id="progressOrdersGrid" class="orders-grid"></div><div id="progressEmpty" class="empty-state hidden">No orders in progress</div></div>
-    <div id="tab-completed" class="tab-content hidden"><div class="section-header"><h2 style="color:#fff;"><i class="fas fa-check-circle"></i> Completed Orders</h2></div><div id="completedOrdersGrid" class="orders-grid"></div><div id="completedEmpty" class="empty-state hidden">No completed orders</div></div>
+    <!-- To Progress Tab (two sections) -->
+    <div id="tab-toprogress" class="tab-content hidden">
+        <div class="section-header"><h2 style="color:#fff;"><i class="fas fa-folder-open"></i> To File</h2></div>
+        <div id="tofileOrdersGrid" class="orders-grid"></div>
+        <div id="tofileEmpty" class="empty-state hidden">No orders in To File</div>
+
+        <div class="section-header" style="margin-top: 2rem;"><h2 style="color:#fff;"><i class="fas fa-print"></i> To Print</h2></div>
+        <div id="toprintOrdersGrid" class="orders-grid"></div>
+        <div id="toprintEmpty" class="empty-state hidden">No orders ready for printing</div>
+    </div>
+
+    <!-- In Progress Tab -->
+    <div id="tab-progress" class="tab-content hidden">
+        <div class="section-header"><h2 style="color:#fff;"><i class="fas fa-chart-line"></i> In Progress</h2></div>
+        <div id="progressOrdersGrid" class="orders-grid"></div>
+        <div id="progressEmpty" class="empty-state hidden">No orders in progress</div>
+    </div>
+
+    <!-- Completed Tab -->
+    <div id="tab-completed" class="tab-content hidden">
+        <div class="section-header"><h2 style="color:#fff;"><i class="fas fa-check-circle"></i> Completed Orders</h2></div>
+        <div id="completedOrdersGrid" class="orders-grid"></div>
+        <div id="completedEmpty" class="empty-state hidden">No completed orders</div>
+    </div>
 
     <!-- Settings Tab -->
     <div id="tab-settings" class="tab-content hidden">
         <div class="settings-panel" style="background:rgba(15,25,35,0.8); backdrop-filter:blur(8px); border-radius:32px; padding:2rem;">
             <div class="section-header"><h2 style="color:#fff;">Price Settings</h2></div>
             <div class="file-actions" style="display:flex; gap:1rem; margin-bottom:2rem;">
-                <!-- Removed Export Master and Import Master buttons -->
                 <button class="file-btn" id="resetDataBtn" style="background:#dc2626;">Reset All</button>
             </div>
             <div><h4 style="color:#f97316;">Fabric Types</h4><div id="fabricSettings"></div><button class="add-setting-btn" data-type="fabric">+ Add Fabric</button></div>
@@ -159,7 +179,6 @@
             <div class="team-actions" style="display:flex; gap:1rem; flex-wrap:wrap;">
                 <button class="file-btn" id="exportAllTeamsBtn"><i class="fas fa-download"></i> Export All Teams</button>
                 <button class="file-btn" id="importTeamOrdersBtn"><i class="fas fa-upload"></i> Import Team Orders</button>
-                <!-- Removed Export Summary button -->
             </div>
             <p style="margin-top:1rem; color:#94a3b8; font-size:0.8rem;">Import a team JSON file (exported from this system) to add orders. All orders will be added to their respective status tabs.</p>
         </div>
@@ -188,8 +207,10 @@
 <!-- Right‑click context menu -->
 <div id="contextMenu" class="context-menu">
     <div id="contextEdit" class="context-menu-item">✏️ Edit</div>
-    <div id="contextNext" class="context-menu-item">➡️ Next</div>
-    <div id="contextBack" class="context-menu-item">⬅️ Back</div>
+    <div id="contextMoveToPrint" class="context-menu-item">🖨️ Move to Print</div>
+    <div id="contextMoveToProgress" class="context-menu-item">📈 Move to Progress</div>
+    <div id="contextMoveToCompleted" class="context-menu-item">✅ Move to Completed</div>
+    <div id="contextDeleteOrder" class="context-menu-item">🗑️ Delete Order</div>
 </div>
 
 <script src="script.js"></script>
