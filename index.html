@@ -118,28 +118,19 @@
                 </div>
 
                 <div class="totals-grid">
-                    <div class="total-item"><div class="total-label">PLAYERS</div><div class="total-value" id="totalPlayers">0</div></div>
-                    <div class="total-item"><div class="total-label">GARMENTS</div><div class="total-value" id="totalGarments">0</div></div>
-                    <div class="total-item"><div class="total-label">SUB TOTAL</div><div class="total-value" id="subTotal">₱0.00</div></div>
-                    <div class="total-item"><div class="total-label">DISCOUNT (₱)</div>
-                        <input type="number" id="discountAmount" value="0" step="0.01" style="width: 120px; background: #1e2a36; border: 1px solid #f97316; color: #fff; padding: 0.5rem; border-radius: 12px; text-align: center; margin-top: 0.5rem;">
-                    </div>
-                    <div class="total-item"><div class="total-label">TOTAL AFTER DISCOUNT</div><div class="total-value" id="totalPrice">₱0.00</div></div>
-                    <div class="total-item"><div class="total-label">BALANCE DUE</div><div class="total-value" id="balanceDue">₱0.00</div></div>
-                </div>
-                <div class="form-section">
-                    <div class="form-row">
-                        <div class="form-group"><label>Amount Paid</label><input type="number" id="amountPaid" value="0" step="0.01"></div>
-                        <div class="form-group"><label>Notes</label><textarea id="orderNotes" rows="2"></textarea></div>
-                    </div>
-                </div>
-                <div class="form-actions" style="display: flex; gap: 1rem; justify-content: flex-end;">
-                    <button type="button" class="btn-secondary" id="clearForm">Clear</button>
-                    <button type="submit" class="btn-primary">Submit Order</button>
-                </div>
-            </form>
-        </div>
+<div class="totals-grid">
+    <div class="total-item"><div class="total-label">PLAYERS</div><div class="total-value" id="totalPlayers">0</div></div>
+    <div class="total-item"><div class="total-label">GARMENTS</div><div class="total-value" id="totalGarments">0</div></div>
+    <div class="total-item"><div class="total-label">SUB TOTAL</div><div class="total-value" id="subTotal">₱0.00</div></div>
+    <div class="total-item"><div class="total-label">DISCOUNT (₱)</div>
+        <input type="number" id="discountAmount" value="0" step="0.01" style="width: 120px; background: #1e2a36; border: 1px solid #f97316; color: #fff; padding: 0.5rem; border-radius: 12px; text-align: center; margin-top: 0.5rem;">
     </div>
+    <div class="total-item"><div class="total-label">TOTAL AFTER DISCOUNT</div><div class="total-value" id="totalPrice">₱0.00</div></div>
+    <div class="total-item"><div class="total-label">DOWN PAYMENT</div>
+        <input type="number" id="downPayment" value="0" step="0.01" style="width: 120px; background: #1e2a36; border: 1px solid #f97316; color: #fff; padding: 0.5rem; border-radius: 12px; text-align: center; margin-top: 0.5rem;">
+    </div>
+    <div class="total-item"><div class="total-label">BALANCE DUE</div><div class="total-value" id="balanceDue">₱0.00</div></div>
+</div>
 
     <!-- To Progress Tab (two sections) -->
     <div id="tab-toprogress" class="tab-content hidden">
