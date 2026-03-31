@@ -3,7 +3,6 @@ const supabaseUrl = 'https://ypjlkheimduflarwxusl.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwamxraGVpbWR1Zmxhcnd4dXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTIxMzcsImV4cCI6MjA5MDA4ODEzN30.noJduEXx2kZ1r2tF6CuCWqnUzmOFM0wh1hrTnfl2xzE';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-// Access control
 let currentAccessLevel = window.currentAccessLevel;
 function isFullAccess() { return currentAccessLevel === 'full'; }
 
@@ -15,7 +14,6 @@ let settings = {
     garmentType: [{ name: 'JERSEY SETS', price: 650 }, { name: 'JERSEY UPPER', price: 350 }]
 };
 
-// Size order
 const SIZE_ORDER = { '3XS':1,'2XS':2,'XS':3,'S':4,'M':5,'L':6,'XL':7,'2XL':8,'3XL':9,'4XL':10,'5XL':11 };
 function getSizeRank(s) { return SIZE_ORDER[s?.toUpperCase()] || 999; }
 function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
@@ -91,14 +89,7 @@ async function saveOrders() {
 }
 
 async function saveSettings() {
-    const dbSettings = {
-        id: 1,
-        fabric: settings.fabric,
-        jersey_type: settings.jerseyType,
-        lower_type: settings.lowerType,
-        garment_type: settings.garmentType,
-        updated_at: new Date()
-    };
+    const dbSettings = { id:1, fabric: settings.fabric, jersey_type: settings.jerseyType, lower_type: settings.lowerType, garment_type: settings.garmentType, updated_at: new Date() };
     const { error } = await supabaseClient.from('settings').upsert(dbSettings);
     if (!error) { populateDropdowns(); renderSettingsEditor(); }
     else console.error('Error saving settings:', error);
@@ -120,7 +111,7 @@ function getStatusDisplay(status) {
     return 'COMPLETED';
 }
 
-// ---------- Order Card Rendering ----------
+// ---------- Order Card Rendering (no buttons, only right-click) ----------
 function renderOrderCard(order, status) {
     const thumb = order.designImage ? `<img src="${order.designImage}" class="order-image-thumb" alt="design">` : '';
     const discountBadge = order.discountAmount > 0 ? `<span class="discount-badge" style="font-size:0.6rem; margin-left:0.5rem;">-₱${order.discountAmount}</span>` : '';
@@ -143,7 +134,7 @@ function renderOrderCard(order, status) {
     </div>`;
 }
 
-// ---------- Context menu (unchanged but keep full) ----------
+// ---------- Context menu ----------
 let currentContextOrderId = null;
 let currentContextStatus = null;
 function showContextMenu(e, orderId, status) {
@@ -243,7 +234,7 @@ function renderRecentOrders() {
     container.innerHTML = recent.map(order => renderOrderCard(order, order.status)).join('');
 }
 
-// ---------- Order Detail Modal (update to show down payment) ----------
+// ---------- Order Modal (full HTML included) ----------
 function openOrderModal(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
@@ -253,40 +244,10 @@ function openOrderModal(orderId) {
         if (sizeDiff !== 0) return sizeDiff;
         return (a.surname || '').localeCompare(b.surname || '');
     });
-    const garmentRowsHtml = sorted.map(g => `<tr class="garment-row">
-        <td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span></td>
-        <td>${escapeHtml(g.surname) || '—'}</td>
-        <td>${escapeHtml(g.number) || '—'}</td>
-        <td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span></td>
-        <td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span></td>
-        <td class="notes-cell">${escapeHtml(g.notes) || '—'}</td>
-    </tr>`).join('');
+    const garmentRowsHtml = sorted.map(g => `<tr class="garment-row"><td><span class="garment-type-badge">${escapeHtml(g.garmentType)}</span></td><td>${escapeHtml(g.surname) || '—'}</td><td>${escapeHtml(g.number) || '—'}</td><td><span class="size-tag">${escapeHtml(g.upperSize) || '—'}</span></td><td><span class="size-tag">${escapeHtml(g.lowerSize) || '—'}</span></td><td class="notes-cell">${escapeHtml(g.notes) || '—'}</td></tr>`).join('');
     const designHtml = order.designImage ? `<div class="design-section"><div class="section-label">Approved Design</div><img src="${order.designImage}" class="design-image-full"></div>` : '';
     const notesHtml = order.notes ? `<div class="notes-section"><div class="section-label">Order Notes</div><div class="notes-content">${escapeHtml(order.notes)}</div></div>` : '';
-    const modalHtml = `<div class="order-modal-body"><div class="order-info-grid">
-        <div class="info-row"><div class="info-label">Team / Customer</div><div class="info-value">${escapeHtml(order.customer)}</div></div>
-        <div class="info-row"><div class="info-label">Order ID</div><div class="info-value">${escapeHtml(order.id)}</div></div>
-        <div class="info-row"><div class="info-label">Date Started</div><div class="info-value">${order.dateStarted || '—'}</div></div>
-        <div class="info-row"><div class="info-label">Date Wanted</div><div class="info-value">${order.dateRelease || '—'}</div></div>
-        <div class="info-row"><div class="info-label">Fabric</div><div class="info-value">${escapeHtml(order.fabric) || '—'}</div></div>
-        <div class="info-row"><div class="info-label">Jersey Type</div><div class="info-value">${escapeHtml(order.jerseyType) || '—'}</div></div>
-        <div class="info-row"><div class="info-label">Lower Type</div><div class="info-value">${escapeHtml(order.lowerType) || '—'}</div></div>
-        ${order.discountAmount > 0 ? `<div class="info-row"><div class="info-label">Discount</div><div class="info-value">-₱${order.discountAmount.toFixed(2)}</div></div>` : ''}
-        <div class="info-row"><div class="info-label">Down Payment</div><div class="info-value">₱${order.downPayment.toFixed(2)}</div></div>
-        <div class="info-row"><div class="info-label">Balance Due</div><div class="info-value price">₱${order.balanceDue.toFixed(2)}</div></div>
-    </div>
-    <div class="garments-section"><div class="garments-header" id="garmentsToggleBtn"><div class="garments-title"><i class="fas fa-tshirt"></i><span>Garments</span><span class="garments-count">${order.totalGarments} items</span></div><i class="fas fa-chevron-down toggle-icon" id="garmentsToggleIcon"></i></div>
-    <div class="garments-table-wrapper" id="garmentsTableWrapper"><table class="garments-modal-table"><thead><tr><th>Type</th><th>Surname</th><th>#</th><th>Upper</th><th>Lower</th><th>Notes</th></tr></thead><tbody>${garmentRowsHtml}</tbody></table></div></div>
-    <div class="totals-section"><div class="total-card"><div class="total-label-sm">Total Garments</div><div class="total-value-sm">${order.totalGarments}</div></div>
-    <div class="total-card"><div class="total-label-sm">Players</div><div class="total-value-sm">${order.totalPlayers}</div></div>
-    ${order.discountAmount > 0 ? `<div class="total-card"><div class="total-label-sm">Sub Total</div><div class="total-value-sm" style="text-decoration:line-through;">₱${(order.subTotal || order.totalPrice + order.discountAmount).toFixed(2)}</div></div>
-    <div class="total-card"><div class="total-label-sm">Discount</div><div class="total-value-sm" style="color:#10b981;">-₱${order.discountAmount.toFixed(2)}</div></div>` : ''}
-    <div class="total-card"><div class="total-label-sm">Down Payment</div><div class="total-value-sm">₱${order.downPayment.toFixed(2)}</div></div>
-    <div class="total-card"><div class="total-label-sm">Balance Due</div><div class="total-value-sm">₱${order.balanceDue.toFixed(2)}</div></div>
-    <div class="total-card"><div class="total-label-sm">Total Price</div><div class="total-value-sm highlight">₱${order.totalPrice.toFixed(2)}</div></div></div>
-    ${designHtml}${notesHtml}
-    <div class="modal-actions"><button class="btn-receipt" onclick="event.stopPropagation(); document.getElementById('orderModal').classList.add('hidden'); showReceiptPreview('${order.id}');"><i class="fas fa-download"></i> Download Receipt (JPG)</button>
-    ${isFullAccess() ? `<button class="btn-edit" onclick="event.stopPropagation(); document.getElementById('orderModal').classList.add('hidden'); openEditOrderModal('${order.id}');"><i class="fas fa-pencil-alt"></i> Edit Order</button>` : ''}</div></div>`;
+    const modalHtml = `<div class="order-modal-body"><div class="order-info-grid"><div class="info-row"><div class="info-label">Team / Customer</div><div class="info-value">${escapeHtml(order.customer)}</div></div><div class="info-row"><div class="info-label">Order ID</div><div class="info-value">${escapeHtml(order.id)}</div></div><div class="info-row"><div class="info-label">Date Started</div><div class="info-value">${order.dateStarted || '—'}</div></div><div class="info-row"><div class="info-label">Date Wanted</div><div class="info-value">${order.dateRelease || '—'}</div></div><div class="info-row"><div class="info-label">Fabric</div><div class="info-value">${escapeHtml(order.fabric) || '—'}</div></div><div class="info-row"><div class="info-label">Jersey Type</div><div class="info-value">${escapeHtml(order.jerseyType) || '—'}</div></div><div class="info-row"><div class="info-label">Lower Type</div><div class="info-value">${escapeHtml(order.lowerType) || '—'}</div></div>${order.discountAmount > 0 ? `<div class="info-row"><div class="info-label">Discount</div><div class="info-value">-₱${order.discountAmount.toFixed(2)}</div></div>` : ''}<div class="info-row"><div class="info-label">Down Payment</div><div class="info-value">₱${order.downPayment.toFixed(2)}</div></div><div class="info-row"><div class="info-label">Balance Due</div><div class="info-value price">₱${order.balanceDue.toFixed(2)}</div></div></div><div class="garments-section"><div class="garments-header" id="garmentsToggleBtn"><div class="garments-title"><i class="fas fa-tshirt"></i><span>Garments</span><span class="garments-count">${order.totalGarments} items</span></div><i class="fas fa-chevron-down toggle-icon" id="garmentsToggleIcon"></i></div><div class="garments-table-wrapper" id="garmentsTableWrapper"><table class="garments-modal-table"><thead><tr><th>Type</th><th>Surname</th><th>#</th><th>Upper</th><th>Lower</th><th>Notes</th></tr></thead><tbody>${garmentRowsHtml}</tbody></table></div></div><div class="totals-section"><div class="total-card"><div class="total-label-sm">Total Garments</div><div class="total-value-sm">${order.totalGarments}</div></div><div class="total-card"><div class="total-label-sm">Players</div><div class="total-value-sm">${order.totalPlayers}</div></div>${order.discountAmount > 0 ? `<div class="total-card"><div class="total-label-sm">Sub Total</div><div class="total-value-sm" style="text-decoration:line-through;">₱${(order.subTotal || order.totalPrice + order.discountAmount).toFixed(2)}</div></div><div class="total-card"><div class="total-label-sm">Discount</div><div class="total-value-sm" style="color:#10b981;">-₱${order.discountAmount.toFixed(2)}</div></div>` : ''}<div class="total-card"><div class="total-label-sm">Down Payment</div><div class="total-value-sm">₱${order.downPayment.toFixed(2)}</div></div><div class="total-card"><div class="total-label-sm">Balance Due</div><div class="total-value-sm">₱${order.balanceDue.toFixed(2)}</div></div><div class="total-card"><div class="total-label-sm">Total Price</div><div class="total-value-sm highlight">₱${order.totalPrice.toFixed(2)}</div></div></div>${designHtml}${notesHtml}<div class="modal-actions"><button class="btn-receipt" onclick="event.stopPropagation(); document.getElementById('orderModal').classList.add('hidden'); showReceiptPreview('${order.id}');"><i class="fas fa-download"></i> Download Receipt (JPG)</button>${isFullAccess() ? `<button class="btn-edit" onclick="event.stopPropagation(); document.getElementById('orderModal').classList.add('hidden'); openEditOrderModal('${order.id}');"><i class="fas fa-pencil-alt"></i> Edit Order</button>` : ''}</div></div>`;
     document.getElementById('modalBody').innerHTML = modalHtml;
     document.getElementById('orderModal').classList.remove('hidden');
     setTimeout(() => {
@@ -304,7 +265,7 @@ function openOrderModal(orderId) {
     }, 50);
 }
 
-// ---------- Edit Order Modal (updated for new pricing) ----------
+// ---------- Edit Order Modal (simplified for space, but full functionality) ----------
 function openEditOrderModal(orderId) {
     if (!isFullAccess()) { alert('View‑only mode: you cannot edit orders.'); return; }
     const order = orders.find(o => o.id === orderId);
@@ -322,14 +283,9 @@ function openEditOrderModal(orderId) {
 
 function buildGarmentSelectOptions(currentType) {
     let html = '';
-    settings.garmentType.forEach(gt => {
-        const selected = (gt.name === currentType) ? 'selected' : '';
-        html += `<option value="${gt.name}" data-price="${gt.price}" ${selected}>${gt.name}</option>`;
-    });
-    const jerseySelected = (currentType === 'Jersey') ? 'selected' : '';
-    html += `<option value="Jersey" ${jerseySelected}>Jersey (dynamic)</option>`;
-    const customSelected = (currentType === 'Custom') ? 'selected' : '';
-    html += `<option value="Custom" ${customSelected}>Custom</option>`;
+    settings.garmentType.forEach(gt => { html += `<option value="${gt.name}" data-price="${gt.price}" ${gt.name === currentType ? 'selected' : ''}>${gt.name}</option>`; });
+    html += `<option value="Jersey" ${currentType === 'Jersey' ? 'selected' : ''}>Jersey (dynamic)</option>`;
+    html += `<option value="Custom" ${currentType === 'Custom' ? 'selected' : ''}>Custom</option>`;
     return html;
 }
 
@@ -337,55 +293,23 @@ function renderEditForm(order, container, onSaveCallback) {
     let garmentsHtml = '';
     order.garments.forEach((g, idx) => {
         const selectOptions = buildGarmentSelectOptions(g.garmentType);
-        const customPriceField = (g.garmentType === 'Custom') ? `<input type="number" class="custom-price-edit" data-idx="${idx}" value="${g.customPrice || 0}" placeholder="Price" style="margin-top:5px; width:100%; background:#1e2a36; border:1px solid #f97316; border-radius:12px; padding:0.4rem;">` : '';
-        garmentsHtml += `<tr data-gidx="${idx}">
-            <td><select class="edit-garment-type" data-idx="${idx}">${selectOptions}</select>${customPriceField}</td>
-            <td><input type="text" class="edit-surname" data-idx="${idx}" value="${escapeHtml(g.surname)}"></td>
-            <td><input type="text" class="edit-number" data-idx="${idx}" value="${escapeHtml(g.number)}"></td>
-            <td><input type="text" class="edit-upper" data-idx="${idx}" value="${escapeHtml(g.upperSize)}"></td>
-            <td><input type="text" class="edit-lower" data-idx="${idx}" value="${escapeHtml(g.lowerSize)}"></td>
-            <td><input type="text" class="edit-notes" data-idx="${idx}" value="${escapeHtml(g.notes)}"></td>
-            <td><i class="fas fa-trash remove-row" data-removeidx="${idx}"></i></td>
-        </tr>`;
+        const customPriceField = (g.garmentType === 'Custom') ? `<input type="number" class="custom-price-edit" value="${g.customPrice || 0}" placeholder="Price" style="margin-top:5px; width:100%; background:#1e2a36; border:1px solid #f97316; border-radius:12px; padding:0.4rem;">` : '';
+        garmentsHtml += `<tr data-gidx="${idx}"><td><select class="edit-garment-type">${selectOptions}</select>${customPriceField}</td><td><input type="text" class="edit-surname" value="${escapeHtml(g.surname)}"></td><td><input type="text" class="edit-number" value="${escapeHtml(g.number)}"></td><td><input type="text" class="edit-upper" value="${escapeHtml(g.upperSize)}"></td><td><input type="text" class="edit-lower" value="${escapeHtml(g.lowerSize)}"></td><td><input type="text" class="edit-notes" value="${escapeHtml(g.notes)}"></td><td><i class="fas fa-trash remove-row"></i></td></tr>`;
     });
-    const designPreview = order.designImage ? `<img src="${order.designImage}" style="max-width:150px; border-radius:12px;">` : '<span style="color:#94a3b8;">No design uploaded</span>';
-    const formHtml = `<div>
-        <div class="form-row" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1rem;">
-            <div class="form-group"><label>Team/Customer</label><input type="text" id="editCustomer" value="${escapeHtml(order.customer)}"></div>
-            <div class="form-group"><label>Date Started</label><input type="date" id="editDateStarted" value="${order.dateStarted||''}"></div>
-            <div class="form-group"><label>Date Release</label><input type="date" id="editDateRelease" value="${order.dateRelease||''}"></div>
-        </div>
-        <div class="form-row" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1rem;">
-            <div class="form-group"><label>Fabric</label><select id="editFabric">${settings.fabric.map(f=>`<option value="${f.name}" ${order.fabric===f.name?'selected':''}>${f.name} (₱${f.price})</option>`).join('')}</select></div>
-            <div class="form-group"><label>Jersey Type</label><select id="editJersey">${settings.jerseyType.map(j=>`<option value="${j.name}" ${order.jerseyType===j.name?'selected':''}>${j.name}</option>`).join('')}</select></div>
-            <div class="form-group"><label>Lower Type</label><select id="editLower">${settings.lowerType.map(l=>`<option value="${l.name}" ${order.lowerType===l.name?'selected':''}>${l.name} (₱${l.price})</option>`).join('')}</select></div>
-        </div>
-        <div class="form-group"><label>Discount Amount (₱)</label><input type="number" id="editDiscountAmount" value="${order.discountAmount || 0}" step="0.01"></div>
-        <div class="form-group"><label>Down Payment (₱)</label><input type="number" id="editDownPayment" value="${order.downPayment || 0}" step="0.01"></div>
-        <h3 style="color:#f97316;">Garments</h3>
-        <table class="garments-table"><thead><tr><th>Type</th><th>Surname</th><th>#</th><th>Upper Size</th><th>Lower Size</th><th>Notes</th><th></th></tr></thead><tbody id="editGarmentsBody">${garmentsHtml}</tbody></table>
-        <button type="button" class="add-row-btn" id="editAddGarmentBtn">+ Add Garment</button>
-        <div class="form-section"><h3 style="color:#f97316;">Approved Design</h3><div class="image-upload-area"><div id="editDesignPreview" class="image-preview">${designPreview}</div><input type="file" id="editDesignImageInput" accept="image/jpeg,image/png,image/jpg"><small>Upload new image to replace existing</small></div></div>
-        <div class="totals-grid"><div class="total-item"><div class="total-label">SUB TOTAL</div><div class="total-value" id="editSubTotal">₱0.00</div></div>
-        <div class="total-item"><div class="total-label">TOTAL AFTER DISCOUNT</div><div class="total-value" id="editTotalPrice">₱0.00</div></div>
-        <div class="total-item"><div class="total-label">DOWN PAYMENT</div><div class="total-value" id="editBalanceDueDisplay">₱0.00</div></div></div>
-        <div class="form-group"><label>Notes</label><textarea id="editNotes" rows="2">${escapeHtml(order.notes||'')}</textarea></div>
-        <div class="flex-btns" style="justify-content:flex-end;"><button class="btn-secondary" id="cancelEditBtn">Cancel</button><button class="btn-primary" id="saveEditBtn">Save Changes</button></div>
-    </div>`;
+    const designPreview = order.designImage ? `<img src="${order.designImage}" style="max-width:150px; border-radius:12px;">` : '<span>No design uploaded</span>';
+    const formHtml = `<div><div class="form-row"><div class="form-group"><label>Team/Customer</label><input type="text" id="editCustomer" value="${escapeHtml(order.customer)}"></div><div class="form-group"><label>Date Started</label><input type="date" id="editDateStarted" value="${order.dateStarted||''}"></div><div class="form-group"><label>Date Release</label><input type="date" id="editDateRelease" value="${order.dateRelease||''}"></div></div><div class="form-row"><div class="form-group"><label>Fabric</label><select id="editFabric">${settings.fabric.map(f=>`<option value="${f.name}" ${order.fabric===f.name?'selected':''}>${f.name} (₱${f.price})</option>`).join('')}</select></div><div class="form-group"><label>Jersey Type</label><select id="editJersey">${settings.jerseyType.map(j=>`<option value="${j.name}" ${order.jerseyType===j.name?'selected':''}>${j.name}</option>`).join('')}</select></div><div class="form-group"><label>Lower Type</label><select id="editLower">${settings.lowerType.map(l=>`<option value="${l.name}" ${order.lowerType===l.name?'selected':''}>${l.name} (₱${l.price})</option>`).join('')}</select></div></div><div class="form-group"><label>Discount Amount (₱)</label><input type="number" id="editDiscountAmount" value="${order.discountAmount || 0}" step="0.01"></div><div class="form-group"><label>Down Payment (₱)</label><input type="number" id="editDownPayment" value="${order.downPayment || 0}" step="0.01"></div><h3>Garments</h3><table class="garments-table"><thead><tr><th>Type</th><th>Surname</th><th>#</th><th>Upper Size</th><th>Lower Size</th><th>Notes</th><th></th></tr></thead><tbody id="editGarmentsBody">${garmentsHtml}</tbody></table><button type="button" class="add-row-btn" id="editAddGarmentBtn">+ Add Garment</button><div class="form-section"><h3>Approved Design</h3><div class="image-upload-area"><div id="editDesignPreview">${designPreview}</div><input type="file" id="editDesignImageInput" accept="image/jpeg,image/png,image/jpg"></div></div><div class="totals-grid"><div class="total-item"><div class="total-label">SUB TOTAL</div><div class="total-value" id="editSubTotal">₱0.00</div></div><div class="total-item"><div class="total-label">TOTAL AFTER DISCOUNT</div><div class="total-value" id="editTotalPrice">₱0.00</div></div><div class="total-item"><div class="total-label">DOWN PAYMENT</div><div class="total-value" id="editBalanceDueDisplay">₱0.00</div></div></div><div class="form-group"><label>Notes</label><textarea id="editNotes">${escapeHtml(order.notes||'')}</textarea></div><div class="flex-btns"><button class="btn-secondary" id="cancelEditBtn">Cancel</button><button class="btn-primary" id="saveEditBtn">Save Changes</button></div></div>`;
     container.innerHTML = formHtml;
-
     function calculateEditTotals() {
         const rows = document.querySelectorAll('#editGarmentsBody tr');
         let subTotal = 0;
-        const fabricPrice = parseFloat(document.querySelector('#editFabric option:checked')?.dataset?.price) || 
-            settings.fabric.find(f=>f.name===document.getElementById('editFabric').value)?.price || 0;
+        const fabricPrice = settings.fabric.find(f=>f.name===document.getElementById('editFabric').value)?.price || 0;
         rows.forEach(row => {
             const typeSelect = row.querySelector('.edit-garment-type');
             if(typeSelect){
                 const val = typeSelect.value;
                 if(val === 'Jersey'){
-                    const jerseyPrice = parseFloat(document.querySelector('#editJersey option:checked')?.dataset?.price) || 0;
-                    const lowerPrice = parseFloat(document.querySelector('#editLower option:checked')?.dataset?.price) || 0;
+                    const jerseyPrice = settings.jerseyType.find(j=>j.name===document.getElementById('editJersey').value)?.price || 0;
+                    const lowerPrice = settings.lowerType.find(l=>l.name===document.getElementById('editLower').value)?.price || 0;
                     subTotal += fabricPrice + jerseyPrice + lowerPrice;
                 } else if(val === 'Custom'){
                     const customInp = row.querySelector('.custom-price-edit');
@@ -393,12 +317,12 @@ function renderEditForm(order, container, onSaveCallback) {
                 } else {
                     const opt = typeSelect.options[typeSelect.selectedIndex];
                     const price = parseFloat(opt?.dataset?.price)||0;
-                    subTotal += price + fabricPrice; // fabric price added for all garment types
+                    subTotal += price + fabricPrice;
                 }
             }
         });
         const discountAmount = parseFloat(document.getElementById('editDiscountAmount').value) || 0;
-        let totalAfterDiscount = Math.max(0, subTotal - discountAmount);
+        const totalAfterDiscount = Math.max(0, subTotal - discountAmount);
         const downPayment = parseFloat(document.getElementById('editDownPayment').value) || 0;
         const balanceDue = Math.max(0, totalAfterDiscount - downPayment);
         document.getElementById('editSubTotal').innerText = '₱' + subTotal.toFixed(2);
@@ -407,18 +331,11 @@ function renderEditForm(order, container, onSaveCallback) {
         window.editSubTotal = subTotal;
         window.editTotalAfterDiscount = totalAfterDiscount;
     }
-
     document.getElementById('editAddGarmentBtn').onclick = () => {
         const tbody = document.getElementById('editGarmentsBody');
         const newRow = document.createElement('tr');
         const defaultOptions = buildGarmentSelectOptions('Jersey');
-        newRow.innerHTML = `<td><select class="edit-garment-type">${defaultOptions}</select></td>
-            <td><input type="text" class="edit-surname"></td>
-            <td><input type="text" class="edit-number"></td>
-            <td><input type="text" class="edit-upper"></td>
-            <td><input type="text" class="edit-lower"></td>
-            <td><input type="text" class="edit-notes"></td>
-            <td><i class="fas fa-times remove-row"></i></td>`;
+        newRow.innerHTML = `<td><select class="edit-garment-type">${defaultOptions}</select></td><td><input type="text" class="edit-surname"></td><td><input type="text" class="edit-number"></td><td><input type="text" class="edit-upper"></td><td><input type="text" class="edit-lower"></td><td><input type="text" class="edit-notes"></td><td><i class="fas fa-times remove-row"></i></td>`;
         tbody.appendChild(newRow);
         const sel = newRow.querySelector('.edit-garment-type');
         sel.onchange = () => {
@@ -494,7 +411,7 @@ function renderEditForm(order, container, onSaveCallback) {
             } else {
                 const gt = settings.garmentType.find(gt=>gt.name===g.garmentType);
                 const basePrice = gt ? gt.price : 0;
-                subTotalCalc += basePrice + fabricPrice; // fabric added to every garment
+                subTotalCalc += basePrice + fabricPrice;
             }
         });
         const discountAmount = parseFloat(document.getElementById('editDiscountAmount').value) || 0;
@@ -531,7 +448,7 @@ function renderEditForm(order, container, onSaveCallback) {
     calculateEditTotals();
 }
 
-// ---------- Receipt Preview (updated with down payment) ----------
+// ---------- Receipt Preview ----------
 let currentReceiptOrderId = null;
 let currentReceiptElement = null;
 function showReceiptPreview(orderId) {
@@ -540,39 +457,9 @@ function showReceiptPreview(orderId) {
     currentReceiptOrderId = orderId;
     const formatDate = (dateStr) => { if (!dateStr || dateStr === '0001-01-01') return 'N/A'; return dateStr; };
     const summary = getGarmentSummary(order);
-    const garmentRowsHtml = summary.map(item => `<div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #e2e8f0;"><div><div style="font-weight:600; color:#1e293b;">${escapeHtml(item.name)}</div><div style="font-size:0.85rem; color:#64748b;">Quantity: ${item.quantity}</div></div><div style="font-weight:700; color:#f97316;">₱${item.totalPrice.toFixed(2)}</div></div>`).join('') || '<div style="color:#64748b;">No garments</div>';
-    const designImageHtml = order.designImage && order.designImage.startsWith('data:image') ? `<img src="${order.designImage}" alt="Design" style="max-width:100%; max-height:200px; border-radius:12px; margin-top:0.5rem;">` : '<div style="color:#94a3b8; font-style:italic;">No design uploaded</div>';
-    const receiptHtml = `<div id="receiptToCapture" style="font-family:'Inter',sans-serif; background:white; border-radius:24px; overflow:hidden; width:100%; box-shadow:0 4px 20px rgba(0,0,0,0.1);">
-        <div style="background:#0a0f1a; color:#f97316; padding:2rem; text-align:center;"><h1 style="font-size:2rem; letter-spacing:-0.5px; margin:0;">⚡ BRIX ATHL</h1><p style="color:#b9c7d9; margin-top:0.5rem;">Garment Order Receipt</p></div>
-        <div style="padding:2rem;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; background:#f8f9fc; padding:1rem; border-radius:16px; margin-bottom:2rem;">
-                <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Team / Customer</div><div style="font-weight:500; color:#1e293b;">${escapeHtml(order.customer)}</div></div>
-                <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Order ID</div><div style="font-weight:500; color:#1e293b;">${escapeHtml(order.id)}</div></div>
-                <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Date Started</div><div style="font-weight:500; color:#1e293b;">${formatDate(order.dateStarted)}</div></div>
-                <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Date Wanted</div><div style="font-weight:500; color:#1e293b;">${formatDate(order.dateRelease)}</div></div>
-                <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Fabric</div><div style="font-weight:500; color:#1e293b;">${order.fabric || 'N/A'}</div></div>
-                <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Jersey Type</div><div style="font-weight:500; color:#1e293b;">${order.jerseyType || 'N/A'}</div></div>
-                <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Lower Type</div><div style="font-weight:500; color:#1e293b;">${order.lowerType || 'N/A'}</div></div>
-                ${order.discountAmount > 0 ? `<div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Discount</div><div style="font-weight:500; color:#10b981;">₱${order.discountAmount.toFixed(2)} OFF</div></div>` : ''}
-                <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Down Payment</div><div style="font-weight:500; color:#1e293b;">₱${order.downPayment.toFixed(2)}</div></div>
-                <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Balance Due</div><div style="font-weight:500; color:#1e293b;">₱${order.balanceDue.toFixed(2)}</div></div>
-            </div>
-            <h3 style="font-size:1.25rem; margin:0 0 1rem 0; color:#1e293b;">🧾 Garment Summary</h3>
-            <div style="margin-bottom:1.5rem;">${garmentRowsHtml}</div>
-            <div style="background:#f1f5f9; padding:1.25rem; border-radius:16px; margin:1.5rem 0;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span style="font-weight:500; color:#1e293b;">Total Garments:</span><span style="font-weight:600; color:#1e293b;">${order.totalGarments}</span></div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span style="font-weight:500; color:#1e293b;">Players:</span><span style="font-weight:600; color:#1e293b;">${order.totalPlayers}</span></div>
-                ${order.discountAmount > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span style="font-weight:500; color:#1e293b;">Sub Total:</span><span style="text-decoration:line-through; color:#64748b;">₱${(order.subTotal || order.totalPrice + order.discountAmount).toFixed(2)}</span></div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span style="font-weight:500; color:#1e293b;">Discount:</span><span style="color:#10b981;">-₱${order.discountAmount.toFixed(2)}</span></div>` : ''}
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span style="font-weight:500; color:#1e293b;">Down Payment:</span><span style="font-weight:600; color:#1e293b;">₱${order.downPayment.toFixed(2)}</span></div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span style="font-weight:500; color:#1e293b;">Balance Due:</span><span style="font-weight:600; color:#1e293b;">₱${order.balanceDue.toFixed(2)}</span></div>
-                <div style="display:flex; justify-content:space-between; margin-top:1rem; padding-top:0.75rem; border-top:2px solid #e2e8f0;"><span style="font-weight:700; font-size:1.2rem; color:#1e293b;">Total Price:</span><span style="font-weight:800; font-size:1.4rem; color:#f97316;">₱${order.totalPrice.toFixed(2)}</span></div>
-            </div>
-            <div style="margin:1.5rem 0; text-align:center;"><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Approved Design</div>${designImageHtml}</div>
-            <div><div style="font-weight:600; color:#f97316; text-transform:uppercase; font-size:0.7rem;">Notes</div><div style="color:#1e293b; margin-top:0.25rem;">${escapeHtml(order.notes || '')}</div></div>
-        </div>
-        <div style="background:#f8f9fc; padding:1.5rem; text-align:center; font-size:0.75rem; color:#64748b; border-top:1px solid #e2e8f0;">Thank you for your order!<br>Brix Athl – Futuristic Garments</div>
-    </div>`;
+    const garmentRowsHtml = summary.map(item => `<div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #e2e8f0;"><div><div style="font-weight:600;">${escapeHtml(item.name)}</div><div style="font-size:0.85rem; color:#64748b;">Quantity: ${item.quantity}</div></div><div style="font-weight:700; color:#f97316;">₱${item.totalPrice.toFixed(2)}</div></div>`).join('') || '<div>No garments</div>';
+    const designImageHtml = order.designImage && order.designImage.startsWith('data:image') ? `<img src="${order.designImage}" alt="Design" style="max-width:100%; max-height:200px; border-radius:12px;">` : '<div>No design uploaded</div>';
+    const receiptHtml = `<div id="receiptToCapture" style="font-family:Inter,sans-serif; background:white; border-radius:24px; overflow:hidden; width:100%;"><div style="background:#0a0f1a; color:#f97316; padding:2rem; text-align:center;"><h1 style="font-size:2rem;">⚡ BRIX ATHL</h1><p style="color:#b9c7d9;">Garment Order Receipt</p></div><div style="padding:2rem;"><div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; background:#f8f9fc; padding:1rem; border-radius:16px; margin-bottom:2rem;"><div><div style="font-weight:600; color:#f97316;">Team / Customer</div><div>${escapeHtml(order.customer)}</div></div><div><div style="font-weight:600; color:#f97316;">Order ID</div><div>${escapeHtml(order.id)}</div></div><div><div style="font-weight:600; color:#f97316;">Date Started</div><div>${formatDate(order.dateStarted)}</div></div><div><div style="font-weight:600; color:#f97316;">Date Wanted</div><div>${formatDate(order.dateRelease)}</div></div><div><div style="font-weight:600; color:#f97316;">Fabric</div><div>${order.fabric || 'N/A'}</div></div><div><div style="font-weight:600; color:#f97316;">Jersey Type</div><div>${order.jerseyType || 'N/A'}</div></div><div><div style="font-weight:600; color:#f97316;">Lower Type</div><div>${order.lowerType || 'N/A'}</div></div>${order.discountAmount > 0 ? `<div><div style="font-weight:600; color:#f97316;">Discount</div><div style="color:#10b981;">-₱${order.discountAmount.toFixed(2)}</div></div>` : ''}<div><div style="font-weight:600; color:#f97316;">Down Payment</div><div>₱${order.downPayment.toFixed(2)}</div></div><div><div style="font-weight:600; color:#f97316;">Balance Due</div><div>₱${order.balanceDue.toFixed(2)}</div></div></div><h3>🧾 Garment Summary</h3><div>${garmentRowsHtml}</div><div style="background:#f1f5f9; padding:1rem; border-radius:16px; margin:1rem 0;"><div style="display:flex; justify-content:space-between;"><span>Total Garments:</span><span>${order.totalGarments}</span></div><div style="display:flex; justify-content:space-between;"><span>Players:</span><span>${order.totalPlayers}</span></div>${order.discountAmount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Sub Total:</span><span style="text-decoration:line-through;">₱${(order.subTotal || order.totalPrice + order.discountAmount).toFixed(2)}</span></div><div style="display:flex; justify-content:space-between;"><span>Discount:</span><span style="color:#10b981;">-₱${order.discountAmount.toFixed(2)}</span></div>` : ''}<div style="display:flex; justify-content:space-between;"><span>Down Payment:</span><span>₱${order.downPayment.toFixed(2)}</span></div><div style="display:flex; justify-content:space-between;"><span>Balance Due:</span><span>₱${order.balanceDue.toFixed(2)}</span></div><div style="display:flex; justify-content:space-between; margin-top:1rem; padding-top:0.5rem; border-top:2px solid #e2e8f0;"><span style="font-weight:700;">Total Price:</span><span style="font-weight:800; color:#f97316;">₱${order.totalPrice.toFixed(2)}</span></div></div><div style="text-align:center;"><div style="font-weight:600; color:#f97316;">Approved Design</div>${designImageHtml}</div><div><div style="font-weight:600; color:#f97316;">Notes</div><div>${escapeHtml(order.notes || '')}</div></div></div><div style="background:#f8f9fc; padding:1rem; text-align:center;">Thank you for your order!<br>Brix Athl – Futuristic Garments</div></div>`;
     document.getElementById('receiptContent').innerHTML = receiptHtml;
     currentReceiptElement = document.getElementById('receiptToCapture');
     document.getElementById('receiptModal').classList.remove('hidden');
@@ -581,7 +468,7 @@ function downloadCurrentReceipt() {
     if (!currentReceiptElement) { alert('No receipt to download.'); return; }
     const order = orders.find(o => o.id === currentReceiptOrderId);
     if (!order) return;
-    html2canvas(currentReceiptElement, { scale: 2, backgroundColor: '#ffffff', logging: false, useCORS: true }).then(canvas => {
+    html2canvas(currentReceiptElement, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
         const link = document.createElement('a');
         link.download = `receipt_${order.customer.replace(/\s/g, '_')}.jpg`;
         link.href = canvas.toDataURL('image/jpeg', 0.95);
@@ -617,37 +504,36 @@ function setupNewOrderImage() {
     imgInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if(file && file.type.match('image.*')) {
-            if(file.size > 2 * 1024 * 1024) { alert('Image too large (max 2MB)'); imgInput.value = ''; previewDiv.innerHTML = ''; return; }
+            if(file.size > 2 * 1024 * 1024) { alert('Image too large'); imgInput.value = ''; previewDiv.innerHTML = ''; return; }
             const reader = new FileReader();
             reader.onload = (ev) => { previewDiv.innerHTML = `<img src="${ev.target.result}" style="max-width:100%; border-radius:8px;">`; };
             reader.readAsDataURL(file);
-        } else if(file) { alert('Please select JPG/PNG image'); imgInput.value = ''; previewDiv.innerHTML = ''; }
+        }
     });
 }
 
 window.updateTotals = function() {
     let subTotal = 0;
     const rows = document.querySelectorAll('#garmentsBody tr');
-    const fabricPrice = parseFloat(document.querySelector('#fabricSelect option:checked')?.dataset?.price) || 
-        settings.fabric.find(f=>f.name===document.getElementById('fabricSelect').value)?.price || 0;
+    const fabricPrice = settings.fabric.find(f=>f.name===document.getElementById('fabricSelect').value)?.price || 0;
     rows.forEach(r => {
         const s = r.querySelector('.garment-select');
         if (s) {
             const val = s.value;
             if (val === 'Jersey') {
-                const jerseyPrice = parseFloat(document.querySelector('#jerseyTypeSelect option:checked')?.dataset?.price) || 0;
-                const lowerPrice = parseFloat(document.querySelector('#lowerTypeSelect option:checked')?.dataset?.price) || 0;
+                const jerseyPrice = settings.jerseyType.find(j=>j.name===document.getElementById('jerseyTypeSelect').value)?.price || 0;
+                const lowerPrice = settings.lowerType.find(l=>l.name===document.getElementById('lowerTypeSelect').value)?.price || 0;
                 subTotal += fabricPrice + jerseyPrice + lowerPrice;
             } else if (val === 'Custom') {
                 subTotal += 0;
             } else {
-                subTotal += parseFloat(s.selectedOptions[0]?.dataset?.price) || 0;
-                subTotal += fabricPrice; // add fabric price to each garment
+                const basePrice = parseFloat(s.selectedOptions[0]?.dataset?.price) || 0;
+                subTotal += basePrice + fabricPrice;
             }
         }
     });
     const discountAmount = parseFloat(document.getElementById('discountAmount').value) || 0;
-    let totalAfterDiscount = Math.max(0, subTotal - discountAmount);
+    const totalAfterDiscount = Math.max(0, subTotal - discountAmount);
     const downPayment = parseFloat(document.getElementById('downPayment').value) || 0;
     const balance = Math.max(0, totalAfterDiscount - downPayment);
     document.getElementById('balanceDue').innerText = '₱' + balance.toFixed(2);
@@ -663,7 +549,6 @@ window.updateTotals = function() {
     document.getElementById('totalPrice').innerText = '₱' + totalAfterDiscount.toFixed(2);
     window.currentSubTotal = subTotal;
     window.currentTotalAfterDiscount = totalAfterDiscount;
-    window.currentDiscountAmount = discountAmount;
 };
 
 // ---------- Export / Import ----------
@@ -674,12 +559,19 @@ async function exportAllTeams() {
         const teamOrders = orders.filter(o=>o.customer===team);
         const data = { teamName: team, exportDate: new Date().toISOString(), orders: teamOrders };
         const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${team.replace(/[^a-z0-9]/gi,'_')}_orders.json`; a.click(); URL.revokeObjectURL(a.href);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${team.replace(/[^a-z0-9]/gi,'_')}_orders.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
     });
     alert(`Exported ${teams.length} team files`);
 }
 async function importTeamOrders() {
-    const input = document.createElement('input'); input.type='file'; input.accept='.json'; input.multiple=true;
+    const input = document.createElement('input');
+    input.type='file';
+    input.accept='.json';
+    input.multiple=true;
     input.onchange=async(e)=>{
         const files=Array.from(e.target.files);
         let imported=0;
@@ -703,7 +595,7 @@ async function importTeamOrders() {
     input.click();
 }
 
-// ---------- Settings Dropdowns & Editor ----------
+// ---------- Settings Editor ----------
 function populateDropdowns() {
     const fabricSel = document.getElementById('fabricSelect');
     if(fabricSel) fabricSel.innerHTML = settings.fabric.map(f=>`<option value="${f.name}" data-price="${f.price}">${f.name} (+₱${f.price})</option>`).join('');
@@ -714,13 +606,13 @@ function populateDropdowns() {
 }
 function renderSettingsEditor() {
     const fabricDiv=document.getElementById('fabricSettings');
-    fabricDiv.innerHTML=settings.fabric.map((item,i)=>`<div class="settings-row" style="display:flex; gap:1rem; margin-bottom:0.5rem;"><input type="text" value="${escapeHtml(item.name)}" data-fabric-name="${i}" style="background:#1e2a36; border:1px solid #f97316; color:#fff; padding:0.5rem; border-radius:12px;"><input type="number" value="${item.price}" data-fabric-price="${i}" step="0.01" style="background:#1e2a36; border:1px solid #f97316; color:#fff; padding:0.5rem; border-radius:12px;"><button class="remove-setting" data-type="fabric" data-index="${i}" style="background:#dc2626; border:none; padding:0.5rem 1rem; border-radius:20px; color:white;"><i class="fas fa-trash"></i></button></div>`).join('');
+    fabricDiv.innerHTML=settings.fabric.map((item,i)=>`<div class="settings-row"><input type="text" value="${escapeHtml(item.name)}" data-fabric-name="${i}"><input type="number" value="${item.price}" data-fabric-price="${i}" step="0.01"><button class="remove-setting" data-type="fabric" data-index="${i}"><i class="fas fa-trash"></i></button></div>`).join('');
     const jerseyDiv=document.getElementById('jerseyTypeSettings');
-    jerseyDiv.innerHTML=settings.jerseyType.map((item,i)=>`<div class="settings-row" style="display:flex; gap:1rem; margin-bottom:0.5rem;"><input type="text" value="${escapeHtml(item.name)}" data-jersey-name="${i}" style="background:#1e2a36; border:1px solid #f97316; color:#fff; padding:0.5rem; border-radius:12px;"><input type="number" value="${item.price}" data-jersey-price="${i}" step="0.01" style="background:#1e2a36; border:1px solid #f97316; color:#fff; padding:0.5rem; border-radius:12px;"><button class="remove-setting" data-type="jerseyType" data-index="${i}" style="background:#dc2626; border:none; padding:0.5rem 1rem; border-radius:20px;"><i class="fas fa-trash"></i></button></div>`).join('');
+    jerseyDiv.innerHTML=settings.jerseyType.map((item,i)=>`<div class="settings-row"><input type="text" value="${escapeHtml(item.name)}" data-jersey-name="${i}"><input type="number" value="${item.price}" data-jersey-price="${i}" step="0.01"><button class="remove-setting" data-type="jerseyType" data-index="${i}"><i class="fas fa-trash"></i></button></div>`).join('');
     const lowerDiv=document.getElementById('lowerTypeSettings');
-    lowerDiv.innerHTML=settings.lowerType.map((item,i)=>`<div class="settings-row" style="display:flex; gap:1rem; margin-bottom:0.5rem;"><input type="text" value="${escapeHtml(item.name)}" data-lower-name="${i}" style="background:#1e2a36; border:1px solid #f97316; color:#fff; padding:0.5rem; border-radius:12px;"><input type="number" value="${item.price}" data-lower-price="${i}" step="0.01" style="background:#1e2a36; border:1px solid #f97316; color:#fff; padding:0.5rem; border-radius:12px;"><button class="remove-setting" data-type="lowerType" data-index="${i}" style="background:#dc2626; border:none; padding:0.5rem 1rem; border-radius:20px;"><i class="fas fa-trash"></i></button></div>`).join('');
+    lowerDiv.innerHTML=settings.lowerType.map((item,i)=>`<div class="settings-row"><input type="text" value="${escapeHtml(item.name)}" data-lower-name="${i}"><input type="number" value="${item.price}" data-lower-price="${i}" step="0.01"><button class="remove-setting" data-type="lowerType" data-index="${i}"><i class="fas fa-trash"></i></button></div>`).join('');
     const garmentDiv=document.getElementById('garmentTypeSettings');
-    garmentDiv.innerHTML=settings.garmentType.map((item,i)=>`<div class="settings-row" style="display:flex; gap:1rem; margin-bottom:0.5rem;"><input type="text" value="${escapeHtml(item.name)}" data-garment-name="${i}" style="background:#1e2a36; border:1px solid #f97316; color:#fff; padding:0.5rem; border-radius:12px;"><input type="number" value="${item.price}" data-garment-price="${i}" step="0.01" style="background:#1e2a36; border:1px solid #f97316; color:#fff; padding:0.5rem; border-radius:12px;"><button class="remove-setting" data-type="garmentType" data-index="${i}" style="background:#dc2626; border:none; padding:0.5rem 1rem; border-radius:20px;"><i class="fas fa-trash"></i></button></div>`).join('');
+    garmentDiv.innerHTML=settings.garmentType.map((item,i)=>`<div class="settings-row"><input type="text" value="${escapeHtml(item.name)}" data-garment-name="${i}"><input type="number" value="${item.price}" data-garment-price="${i}" step="0.01"><button class="remove-setting" data-type="garmentType" data-index="${i}"><i class="fas fa-trash"></i></button></div>`).join('');
 }
 
 // ---------- Reset All Data ----------
@@ -754,13 +646,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tbody = document.getElementById('garmentsBody');
         const row = document.createElement('tr');
         const defaultOptions = settings.garmentType.map(gt=>`<option value="${gt.name}" data-price="${gt.price}">${gt.name}</option>`).join('') + '<option value="Jersey">Jersey (dynamic)</option><option value="Custom">Custom</option>';
-        row.innerHTML = `<td><select class="garment-select">${defaultOptions}</select></td>
-            <td><input type="text" class="surname"></td>
-            <td><input type="text" class="number"></td>
-            <td><input type="text" class="upper-size"></td>
-            <td><input type="text" class="lower-size"></td>
-            <td><input type="text" class="notes"></td>
-            <td><i class="fas fa-times remove-row"></i></td>`;
+        row.innerHTML = `<td><select class="garment-select">${defaultOptions}</select></td><td><input type="text" class="surname"></td><td><input type="text" class="number"></td><td><input type="text" class="upper-size"></td><td><input type="text" class="lower-size"></td><td><input type="text" class="notes"></td><td><i class="fas fa-times remove-row"></i></td>`;
         tbody.appendChild(row);
         row.querySelector('.remove-row').onclick = () => { row.remove(); updateTotals(); };
         row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', updateTotals));
@@ -835,7 +721,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             reader.readAsDataURL(fileInput.files[0]);
         } else { await saveOrder(); }
     };
-    
+
     document.getElementById('clearForm').onclick = () => {
         document.getElementById('orderForm').reset();
         document.getElementById('dateStarted').value=today;
@@ -847,14 +733,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('designImagePreview').innerHTML = '';
         document.getElementById('designImageInput').value = '';
     };
-    
+
     document.getElementById('downPayment').addEventListener('input', updateTotals);
     document.getElementById('fabricSelect').addEventListener('change', updateTotals);
     document.getElementById('jerseyTypeSelect').addEventListener('change', updateTotals);
     document.getElementById('lowerTypeSelect').addEventListener('change', updateTotals);
     document.getElementById('discountAmount').addEventListener('input', updateTotals);
 
-    // Settings save
     document.getElementById('saveSettings').onclick = async () => {
         settings.fabric=[]; document.querySelectorAll('#fabricSettings .settings-row').forEach(r=>{ const name=r.querySelector('input[type="text"]').value; const price=parseFloat(r.querySelector('input[type="number"]').value)||0; if(name) settings.fabric.push({name,price}); });
         settings.jerseyType=[]; document.querySelectorAll('#jerseyTypeSettings .settings-row').forEach(r=>{ const name=r.querySelector('input[type="text"]').value; const price=parseFloat(r.querySelector('input[type="number"]').value)||0; if(name) settings.jerseyType.push({name,price}); });
