@@ -186,7 +186,6 @@ function showContextMenu(e, orderId, status) {
     const moveToCompleted = document.getElementById('contextMoveToCompleted');
     const deleteOrder = document.getElementById('contextDeleteOrder');
 
-    // Configure menu based on status
     if (status === 'tofile') {
         editItem.style.display = 'block';
         moveToPrint.style.display = 'block';
@@ -209,7 +208,6 @@ function showContextMenu(e, orderId, status) {
         moveToCompleted.style.display = 'none';
     }
 
-    // Delete order always shown for full access
     deleteOrder.style.display = 'block';
 
     menu.style.left = e.clientX + 'px';
@@ -294,10 +292,7 @@ async function deleteOrder(orderId) {
     if (!order) return;
     if (!confirm(`Delete order for "${order.customer}"? This action is permanent.`)) return;
 
-    // Remove from local array
     orders = orders.filter(o => o.id !== orderId);
-
-    // Delete from Supabase
     const { error } = await supabaseClient
         .from('orders')
         .delete()
@@ -305,7 +300,7 @@ async function deleteOrder(orderId) {
     if (error) {
         console.error('Error deleting order:', error);
         alert('Failed to delete order. Please try again.');
-        await loadData(); // restore
+        await loadData();
         return;
     }
     await saveOrders();
@@ -314,7 +309,6 @@ async function deleteOrder(orderId) {
 
 // ---------- Render Functions ----------
 function renderOrdersByStatus() {
-    // For the combined tab "To Progress"
     const tofileOrders = orders.filter(o => o.status === 'tofile');
     const toprintOrders = orders.filter(o => o.status === 'toprint');
     const tofileGrid = document.getElementById('tofileOrdersGrid');
@@ -338,7 +332,6 @@ function renderOrdersByStatus() {
         if (toprintGrid) toprintGrid.innerHTML = toprintOrders.map(o => renderOrderCard(o, 'toprint')).join('');
     }
 
-    // Progress and Completed tabs
     ['progress', 'completed'].forEach(st => {
         const filtered = orders.filter(o => o.status === st);
         const grid = document.getElementById(`${st}OrdersGrid`);
@@ -500,7 +493,7 @@ function openOrderModal(orderId) {
                     <table class="garments-modal-table">
                         <thead>汽<th>Type</th><th>Surname</th><th>#</th><th>Upper</th><th>Lower</th><th>Notes</th> </thead>
                         <tbody>${garmentRowsHtml}</tbody>
-                     </table>
+                      </table
                 </div>
             </div>
 
@@ -528,7 +521,6 @@ function openOrderModal(orderId) {
     document.getElementById('modalBody').innerHTML = modalHtml;
     document.getElementById('orderModal').classList.remove('hidden');
 
-    // Garments toggle
     setTimeout(() => {
         const toggleBtn = document.getElementById('garmentsToggleBtn');
         const tableWrapper = document.getElementById('garmentsTableWrapper');
@@ -590,7 +582,7 @@ function renderEditForm(order, container, onSaveCallback) {
                    <td><input type="text" class="edit-lower" data-idx="${idx}" value="${escapeHtml(g.lowerSize)}"></td>
                    <td><input type="text" class="edit-notes" data-idx="${idx}" value="${escapeHtml(g.notes)}"></td>
                    <td><i class="fas fa-trash remove-row" data-removeidx="${idx}"></i></td>
-               </tr>`;
+                </tr>`;
     });
     const designPreview = order.designImage ? `<img src="${order.designImage}" style="max-width:150px; border-radius:12px;">` : '<span style="color:#94a3b8;">No design uploaded</span>';
     const formHtml = `
@@ -607,7 +599,7 @@ function renderEditForm(order, container, onSaveCallback) {
             </div>
             <div class="form-group"><label>Discount Amount (₱)</label><input type="number" id="editDiscountAmount" value="${order.discountAmount || 0}" step="0.01"></div>
             <h3 style="color:#f97316;">Garments</h3>
-            <table class="garments-table"><thead> <th>Type</th><th>Surname</th><th>#</th><th>Upper Size</th><th>Lower Size</th><th>Notes</th><th></th> </thead><tbody id="editGarmentsBody">${garmentsHtml}</tbody></table>
+            <table class="garments-table"><thead> <th>Type</th><th>Surname</th><th>#</th><th>Upper Size</th><th>Lower Size</th><th>Notes</th><th></th> </thead><tbody id="editGarmentsBody">${garmentsHtml}</tbody> </table
             <button type="button" class="add-row-btn" id="editAddGarmentBtn">+ Add Garment</button>
             <div class="form-section">
                 <h3 style="color:#f97316;">Approved Design</h3>
@@ -779,7 +771,6 @@ function renderEditForm(order, container, onSaveCallback) {
         order.totalPrice = totalPriceCalc;
         order.amountPaid = amountPaid;
         order.balanceDue = totalPriceCalc - amountPaid;
-        // Players count using surname+number
         const uniquePlayers = new Set();
         updatedGarments.forEach(g => {
             if (g.surname && g.surname.trim() !== '') {
@@ -836,15 +827,11 @@ function showReceiptPreview(orderId) {
 
     const receiptHtml = `
         <div id="receiptToCapture" style="font-family: 'Inter', sans-serif; background: white; border-radius: 24px; overflow: hidden; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-            <!-- Header -->
             <div style="background: #0a0f1a; color: #f97316; padding: 2rem; text-align: center;">
                 <h1 style="font-size: 2rem; letter-spacing: -0.5px; margin:0;">⚡ BRIX ATHL</h1>
                 <p style="color: #b9c7d9; margin-top: 0.5rem;">Garment Order Receipt</p>
             </div>
-
-            <!-- Body -->
             <div style="padding: 2rem;">
-                <!-- Order Info Grid -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #f8f9fc; padding: 1rem; border-radius: 16px; margin-bottom: 2rem;">
                     <div><div style="font-weight: 600; color: #f97316; text-transform: uppercase; font-size: 0.7rem;">Team / Customer</div><div style="font-weight: 500; color: #1e293b;">${escapeHtml(order.customer)}</div></div>
                     <div><div style="font-weight: 600; color: #f97316; text-transform: uppercase; font-size: 0.7rem;">Order ID</div><div style="font-weight: 500; color: #1e293b;">${escapeHtml(order.id)}</div></div>
@@ -855,61 +842,28 @@ function showReceiptPreview(orderId) {
                     <div><div style="font-weight: 600; color: #f97316; text-transform: uppercase; font-size: 0.7rem;">Lower Type</div><div style="font-weight: 500; color: #1e293b;">${order.lowerType || 'N/A'}</div></div>
                     ${order.discountAmount > 0 ? `<div><div style="font-weight: 600; color: #f97316; text-transform: uppercase; font-size: 0.7rem;">Discount</div><div style="font-weight: 500; color: #10b981;">₱${order.discountAmount.toFixed(2)} OFF</div></div>` : ''}
                 </div>
-
-                <!-- Garment Summary -->
                 <h3 style="font-size: 1.25rem; margin: 0 0 1rem 0; color: #1e293b;">🧾 Garment Summary</h3>
-                <div style="margin-bottom: 1.5rem;">
-                    ${garmentRowsHtml}
-                </div>
-
-                <!-- Totals -->
+                <div style="margin-bottom: 1.5rem;">${garmentRowsHtml}</div>
                 <div style="background: #f1f5f9; padding: 1.25rem; border-radius: 16px; margin: 1.5rem 0;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 500; color: #1e293b;">Total Garments:</span>
-                        <span style="font-weight: 600; color: #1e293b;">${order.totalGarments}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 500; color: #1e293b;">Players:</span>
-                        <span style="font-weight: 600; color: #1e293b;">${order.totalPlayers}</span>
-                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500; color: #1e293b;">Total Garments:</span><span style="font-weight: 600; color: #1e293b;">${order.totalGarments}</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500; color: #1e293b;">Players:</span><span style="font-weight: 600; color: #1e293b;">${order.totalPlayers}</span></div>
                     ${order.discountAmount > 0 ? `
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="font-weight: 500; color: #1e293b;">Sub Total:</span>
-                            <span style="text-decoration: line-through; color: #64748b;">₱${(order.subTotal || order.totalPrice + order.discountAmount).toFixed(2)}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="font-weight: 500; color: #1e293b;">Discount:</span>
-                            <span style="color: #10b981;">-₱${order.discountAmount.toFixed(2)}</span>
-                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500; color: #1e293b;">Sub Total:</span><span style="text-decoration: line-through; color: #64748b;">₱${(order.subTotal || order.totalPrice + order.discountAmount).toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500; color: #1e293b;">Discount:</span><span style="color: #10b981;">-₱${order.discountAmount.toFixed(2)}</span></div>
                     ` : ''}
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 500; color: #1e293b;">Amount Paid:</span>
-                        <span style="font-weight: 600; color: #1e293b;">₱${order.amountPaid.toFixed(2)}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 500; color: #1e293b;">Balance Due:</span>
-                        <span style="font-weight: 600; color: #1e293b;">₱${order.balanceDue.toFixed(2)}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 0.75rem; border-top: 2px solid #e2e8f0;">
-                        <span style="font-weight: 700; font-size: 1.2rem; color: #1e293b;">Total Price:</span>
-                        <span style="font-weight: 800; font-size: 1.4rem; color: #f97316;">₱${order.totalPrice.toFixed(2)}</span>
-                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500; color: #1e293b;">Amount Paid:</span><span style="font-weight: 600; color: #1e293b;">₱${order.amountPaid.toFixed(2)}</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500; color: #1e293b;">Balance Due:</span><span style="font-weight: 600; color: #1e293b;">₱${order.balanceDue.toFixed(2)}</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 0.75rem; border-top: 2px solid #e2e8f0;"><span style="font-weight: 700; font-size: 1.2rem; color: #1e293b;">Total Price:</span><span style="font-weight: 800; font-size: 1.4rem; color: #f97316;">₱${order.totalPrice.toFixed(2)}</span></div>
                 </div>
-
-                <!-- Design Image -->
                 <div style="margin: 1.5rem 0; text-align: center;">
                     <div style="font-weight: 600; color: #f97316; text-transform: uppercase; font-size: 0.7rem;">Approved Design</div>
                     ${designImageHtml}
                 </div>
-
-                <!-- Notes -->
                 <div style="margin-top: 1rem;">
                     <div style="font-weight: 600; color: #f97316; text-transform: uppercase; font-size: 0.7rem;">Notes</div>
                     <div style="color: #1e293b; margin-top: 0.25rem;">${escapeHtml(order.notes || '')}</div>
                 </div>
             </div>
-
-            <!-- Footer -->
             <div style="background: #f8f9fc; padding: 1.5rem; text-align: center; font-size: 0.75rem; color: #64748b; border-top: 1px solid #e2e8f0;">
                 Thank you for your order!<br>Brix Athl – Futuristic Garments
             </div>
@@ -1016,7 +970,6 @@ window.updateTotals = function() {
     document.getElementById('balanceDue').innerText = '₱' + balance.toFixed(2);
     document.getElementById('totalGarments').innerText = rows.length;
     
-    // Player count: surname + number
     const uniquePlayers = new Set();
     rows.forEach(r => {
         const surname = r.querySelector('.surname')?.value;
@@ -1103,10 +1056,8 @@ function renderSettingsEditor() {
 // ---------- Reset All Data ----------
 async function resetAllData() {
     if (!confirm('Delete ALL orders and reset settings to default?')) return;
-    // Delete all orders
     const { error: deleteError } = await supabaseClient.from('orders').delete().neq('id', '');
     if (deleteError) console.error(deleteError);
-    // Reset settings to default
     settings = {
         fabric: [{ name: 'Mesh', price: 0 }, { name: 'Polyester', price: 0 }],
         jerseyType: [{ name: 'V-neck U-cut', price: 0 }, { name: 'Crew neck', price: 0 }],
@@ -1114,10 +1065,218 @@ async function resetAllData() {
         garmentType: [{ name: 'Hoodie', price: 800 }, { name: 'Jersey', price: 300 }, { name: 'Shorts', price: 0 }]
     };
     await saveSettings();
-    // Clear local array
     orders = [];
     refreshAllDisplays();
     alert('All data reset.');
+}
+
+// ========== NEW: Manual Receipt Creator ==========
+function openManualReceiptModal() {
+    // Build the form dynamically
+    const body = document.getElementById('manualReceiptBody');
+    body.innerHTML = `
+        <style>
+            .manual-form-group { margin-bottom: 1rem; }
+            .manual-form-group label { display: block; margin-bottom: 0.3rem; font-weight: 600; color: #f97316; }
+            .manual-form-group input, .manual-form-group textarea, .manual-form-group select { width: 100%; padding: 0.5rem; background: #1e2a36; border: 1px solid #2a3a4a; border-radius: 12px; color: white; }
+            .garment-entry { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 16px; margin-bottom: 1rem; }
+            .remove-garment-btn { background: #dc2626; border: none; padding: 0.3rem 0.8rem; border-radius: 20px; color: white; cursor: pointer; margin-top: 0.5rem; }
+            .add-garment-btn { background: none; border: 2px dashed #f97316; color: #f97316; padding: 0.5rem 1rem; border-radius: 40px; cursor: pointer; margin-top: 0.5rem; }
+        </style>
+        <div id="manualGarmentsContainer"></div>
+        <button type="button" class="add-garment-btn" id="manualAddGarmentBtn">+ Add Garment</button>
+        <div class="manual-form-group" style="margin-top: 1rem;">
+            <label>Discount Amount (₱)</label>
+            <input type="number" id="manualDiscount" value="0" step="0.01">
+        </div>
+        <div class="manual-form-group">
+            <label>Amount Paid (₱)</label>
+            <input type="number" id="manualAmountPaid" value="0" step="0.01">
+        </div>
+        <div class="manual-form-group">
+            <label>Notes (optional)</label>
+            <textarea id="manualNotes" rows="2"></textarea>
+        </div>
+        <div class="manual-form-group">
+            <label>Design Image URL (optional)</label>
+            <input type="text" id="manualDesignImageUrl" placeholder="https://... or data:image...">
+        </div>
+    `;
+    
+    // Add initial garment row
+    function addGarmentRow() {
+        const container = document.getElementById('manualGarmentsContainer');
+        const idx = container.children.length;
+        const div = document.createElement('div');
+        div.className = 'garment-entry';
+        div.innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                <div><label>Garment Type</label><input type="text" placeholder="e.g., Jersey, Hoodie" class="manual-garment-type" value="Jersey"></div>
+                <div><label>Quantity</label><input type="number" class="manual-garment-qty" value="1" min="1"></div>
+                <div><label>Unit Price (₱)</label><input type="number" class="manual-garment-price" value="0" step="0.01"></div>
+                <div><label>Surname (optional)</label><input type="text" class="manual-garment-surname" placeholder="Player surname"></div>
+                <div><label>Number (optional)</label><input type="text" class="manual-garment-number" placeholder="Jersey #"></div>
+                <div><label>Size (optional)</label><input type="text" class="manual-garment-size" placeholder="M, L, XL"></div>
+            </div>
+            <button type="button" class="remove-garment-btn">Remove</button>
+        `;
+        div.querySelector('.remove-garment-btn').onclick = () => div.remove();
+        container.appendChild(div);
+    }
+    
+    document.getElementById('manualAddGarmentBtn').onclick = addGarmentRow;
+    addGarmentRow(); // start with one
+    
+    document.getElementById('manualReceiptModal').classList.remove('hidden');
+}
+
+function generateManualReceipt() {
+    // Collect customer name (prompt for simplicity)
+    const customerName = prompt("Enter customer/team name:", "Manual Entry");
+    if (!customerName) return;
+    
+    const garments = [];
+    const garmentDivs = document.querySelectorAll('#manualGarmentsContainer .garment-entry');
+    let subTotal = 0;
+    garmentDivs.forEach(div => {
+        const type = div.querySelector('.manual-garment-type')?.value || 'Garment';
+        const qty = parseInt(div.querySelector('.manual-garment-qty')?.value) || 1;
+        const unitPrice = parseFloat(div.querySelector('.manual-garment-price')?.value) || 0;
+        const surname = div.querySelector('.manual-garment-surname')?.value || '';
+        const number = div.querySelector('.manual-garment-number')?.value || '';
+        const size = div.querySelector('.manual-garment-size')?.value || '';
+        const totalItem = unitPrice * qty;
+        subTotal += totalItem;
+        for (let i = 0; i < qty; i++) {
+            garments.push({
+                garmentType: type,
+                surname: surname,
+                number: number,
+                upperSize: size,
+                lowerSize: '',
+                notes: '',
+                unitPrice: unitPrice
+            });
+        }
+    });
+    
+    const discount = parseFloat(document.getElementById('manualDiscount').value) || 0;
+    const amountPaid = parseFloat(document.getElementById('manualAmountPaid').value) || 0;
+    const totalPrice = Math.max(0, subTotal - discount);
+    const balanceDue = totalPrice - amountPaid;
+    const notes = document.getElementById('manualNotes').value;
+    const designImage = document.getElementById('manualDesignImageUrl').value;
+    
+    // Build a fake order object for receipt rendering
+    const fakeOrder = {
+        id: 'MANUAL-' + Date.now(),
+        customer: customerName,
+        dateStarted: new Date().toISOString().split('T')[0],
+        dateRelease: '',
+        fabric: 'N/A',
+        jerseyType: 'N/A',
+        lowerType: 'N/A',
+        garments: garments.map(g => ({
+            garmentType: g.garmentType,
+            surname: g.surname,
+            number: g.number,
+            upperSize: g.upperSize,
+            lowerSize: g.lowerSize,
+            notes: g.notes,
+            customPrice: g.unitPrice
+        })),
+        totalPlayers: new Set(garments.filter(g => g.surname).map(g => g.surname)).size,
+        totalGarments: garments.length,
+        subTotal: subTotal,
+        discountAmount: discount,
+        discountValue: discount,
+        totalPrice: totalPrice,
+        amountPaid: amountPaid,
+        balanceDue: balanceDue,
+        notes: notes,
+        designImage: designImage
+    };
+    
+    // Reuse existing receipt preview function but with manual order
+    function showManualReceiptPreview(order) {
+        const formatDate = (dateStr) => dateStr || 'N/A';
+        const summaryMap = new Map();
+        order.garments.forEach(g => {
+            const key = g.garmentType;
+            const unitPrice = g.customPrice || 0;
+            if (summaryMap.has(key)) {
+                const existing = summaryMap.get(key);
+                existing.quantity++;
+                existing.totalPrice += unitPrice;
+            } else {
+                summaryMap.set(key, { name: key, quantity: 1, totalPrice: unitPrice });
+            }
+        });
+        const summary = Array.from(summaryMap.values());
+        const garmentRowsHtml = summary.map(item => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0;">
+                <div>
+                    <div style="font-weight: 600; color: #1e293b;">${escapeHtml(item.name)}</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">Quantity: ${item.quantity}</div>
+                </div>
+                <div style="font-weight: 700; color: #f97316;">₱${item.totalPrice.toFixed(2)}</div>
+            </div>
+        `).join('');
+        const designImageHtml = order.designImage ? `<img src="${order.designImage}" style="max-width:100%; max-height:200px; border-radius:12px;">` : '<div style="color:#94a3b8;">No design</div>';
+        const receiptHtml = `
+            <div id="manualReceiptToCapture" style="font-family: 'Inter', sans-serif; background: white; border-radius: 24px; overflow: hidden; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                <div style="background: #0a0f1a; color: #f97316; padding: 2rem; text-align: center;">
+                    <h1 style="font-size: 2rem; letter-spacing: -0.5px; margin:0;">⚡ BRIX ATHL</h1>
+                    <p style="color: #b9c7d9; margin-top: 0.5rem;">Manual Receipt</p>
+                </div>
+                <div style="padding: 2rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #f8f9fc; padding: 1rem; border-radius: 16px; margin-bottom: 2rem;">
+                        <div><div style="font-weight: 600; color: #f97316; text-transform: uppercase; font-size: 0.7rem;">Customer</div><div style="font-weight: 500; color: #1e293b;">${escapeHtml(order.customer)}</div></div>
+                        <div><div style="font-weight: 600; color: #f97316; text-transform: uppercase; font-size: 0.7rem;">Date</div><div style="font-weight: 500; color: #1e293b;">${formatDate(order.dateStarted)}</div></div>
+                        ${order.discountAmount > 0 ? `<div><div style="font-weight: 600; color: #f97316; text-transform: uppercase; font-size: 0.7rem;">Discount</div><div style="font-weight: 500; color: #10b981;">₱${order.discountAmount.toFixed(2)}</div></div>` : ''}
+                    </div>
+                    <h3 style="font-size: 1.25rem; margin: 0 0 1rem 0; color: #1e293b;">🧾 Garment Summary</h3>
+                    <div style="margin-bottom: 1.5rem;">${garmentRowsHtml}</div>
+                    <div style="background: #f1f5f9; padding: 1.25rem; border-radius: 16px; margin: 1.5rem 0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500;">Total Garments:</span><span>${order.totalGarments}</span></div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500;">Players:</span><span>${order.totalPlayers}</span></div>
+                        ${order.discountAmount > 0 ? `<div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500;">Sub Total:</span><span style="text-decoration: line-through;">₱${order.subTotal.toFixed(2)}</span></div>` : ''}
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500;">Amount Paid:</span><span>₱${order.amountPaid.toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span style="font-weight: 500;">Balance Due:</span><span>₱${order.balanceDue.toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 0.75rem; border-top: 2px solid #e2e8f0;"><span style="font-weight: 700; font-size: 1.2rem;">Total Price:</span><span style="font-weight: 800; font-size: 1.4rem; color: #f97316;">₱${order.totalPrice.toFixed(2)}</span></div>
+                    </div>
+                    <div style="text-align: center;">${designImageHtml}</div>
+                    ${order.notes ? `<div style="margin-top:1rem;"><div style="font-weight:600;">Notes</div><div>${escapeHtml(order.notes)}</div></div>` : ''}
+                </div>
+                <div style="background: #f8f9fc; padding: 1.5rem; text-align: center; font-size: 0.75rem; color: #64748b;">Thank you!<br>Brix Athl</div>
+            </div>
+        `;
+        const container = document.getElementById('receiptContent');
+        container.innerHTML = receiptHtml;
+        const receiptElement = document.getElementById('manualReceiptToCapture');
+        document.getElementById('receiptModal').classList.remove('hidden');
+        // Override download to use this element
+        const originalDownload = window.downloadCurrentReceipt;
+        window.downloadCurrentReceipt = function() {
+            html2canvas(receiptElement, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `manual_receipt_${order.customer.replace(/\s/g, '_')}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+            }).catch(err => alert('Error generating receipt'));
+        };
+        // Restore after close
+        const closeHandler = () => {
+            window.downloadCurrentReceipt = originalDownload;
+            document.getElementById('closeReceiptModal').removeEventListener('click', closeHandler);
+            document.getElementById('closeReceiptModalBtn').removeEventListener('click', closeHandler);
+        };
+        document.getElementById('closeReceiptModal').addEventListener('click', closeHandler);
+        document.getElementById('closeReceiptModalBtn').addEventListener('click', closeHandler);
+    }
+    
+    showManualReceiptPreview(fakeOrder);
+    document.getElementById('manualReceiptModal').classList.add('hidden');
 }
 
 // ---------- DOMContentLoaded ----------
@@ -1126,7 +1285,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateDropdowns();
     renderSettingsEditor();
     
-    // Hide settings tab if view‑only
     if (!isFullAccess()) {
         const settingsNav = document.querySelector('.nav-item[data-tab="settings"]');
         if (settingsNav) settingsNav.style.display = 'none';
@@ -1241,7 +1399,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('lowerTypeSelect').addEventListener('change', updateTotals);
     document.getElementById('discountAmount').addEventListener('input', updateTotals);
 
-    // Settings save
     document.getElementById('saveSettings').onclick = async () => {
         settings.fabric=[]; document.querySelectorAll('#fabricSettings .settings-row').forEach(r=>{ const name=r.querySelector('input[type="text"]').value; const price=parseFloat(r.querySelector('input[type="number"]').value)||0; if(name) settings.fabric.push({name,price}); });
         settings.jerseyType=[]; document.querySelectorAll('#jerseyTypeSettings .settings-row').forEach(r=>{ const name=r.querySelector('input[type="text"]').value; const price=parseFloat(r.querySelector('input[type="number"]').value)||0; if(name) settings.jerseyType.push({name,price}); });
@@ -1277,13 +1434,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('closeModalBtn').onclick = () => document.getElementById('orderModal').classList.add('hidden');
     document.getElementById('closeEditModal').onclick = () => document.getElementById('editOrderModal').classList.add('hidden');
     
-    // Receipt modal handlers
     document.getElementById('closeReceiptModal').onclick = () => document.getElementById('receiptModal').classList.add('hidden');
     document.getElementById('closeReceiptModalBtn').onclick = () => document.getElementById('receiptModal').classList.add('hidden');
     document.getElementById('downloadReceiptBtn').onclick = downloadCurrentReceipt;
     
     document.getElementById('exportAllTeamsBtn').onclick = exportAllTeams;
     document.getElementById('importTeamOrdersBtn').onclick = importTeamOrders;
+    
+    // NEW: Manual receipt button
+    const createReceiptBtn = document.getElementById('createReceiptBtn');
+    if (createReceiptBtn) {
+        createReceiptBtn.onclick = () => openManualReceiptModal();
+    }
+    document.getElementById('closeManualReceiptModal')?.addEventListener('click', () => document.getElementById('manualReceiptModal').classList.add('hidden'));
+    document.getElementById('cancelManualReceiptBtn')?.addEventListener('click', () => document.getElementById('manualReceiptModal').classList.add('hidden'));
+    document.getElementById('generateManualReceiptBtn')?.addEventListener('click', generateManualReceipt);
 
     window.switchTab = (tabId) => {
         document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
