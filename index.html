@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Brix Athl · Futuristic Garments Order System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // One‑time login: read access level from localStorage, then delete it
+        const accessLevel = localStorage.getItem('brixAccessLevel');
+        if (!accessLevel) {
+            window.location.href = 'login.html';
+        } else {
+            window.currentAccessLevel = accessLevel;
+            localStorage.removeItem('brixAccessLevel');
+        }
+    </script>
+    <style>
+        /* Context menu styles */
+        .context-menu {
+            display: none;
+            position: fixed;
+            background: #1e2a36;
+            border: 1px solid #f97316;
+            border-radius: 12px;
+            padding: 0.5rem 0;
+            z-index: 9999;
+            min-width: 160px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .context-menu-item {
+            padding: 0.6rem 1rem;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .context-menu-item:hover {
+            background: #f97316;
+            color: white;
+        }
+        /* Custom status badge for To Print */
+        .status-badge.toprint {
+            background: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="nav-header">
+        <div class="nav-item active" data-tab="dashboard"><i class="fas fa-home"></i> Dashboard</div>
+        <div class="nav-item" data-tab="new"><i class="fas fa-plus-circle"></i> New Order</div>
+        <div class="nav-item" data-tab="toprogress"><i class="fas fa-folder-open"></i> To Progress</div>
+        <div class="nav-item" data-tab="progress"><i class="fas fa-chart-line"></i> In Progress</div>
+        <div class="nav-item" data-tab="completed"><i class="fas fa-check-circle"></i> Completed</div>
+        <div class="nav-spacer"></div>
+        <div class="nav-item" data-tab="settings"><i class="fas fa-sliders-h"></i> Settings</div>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="tab-dashboard" class="tab-content">
+        <div class="welcome-section">
+            <div class="welcome-title"><i class="fas fa-tshirt"></i> Brix Athl</div>
+            <div class="welcome-subtitle">Manage your garment orders from start to finish</div>
+        </div>
+        <div class="dashboard-stats">
+            <div class="stat-card"><div class="stat-header"><span class="stat-title">To File</span><i class="fas fa-folder-open stat-icon"></i></div><div class="stat-value" id="statToFile">0</div></div>
+            <div class="stat-card"><div class="stat-header"><span class="stat-title">To Print</span><i class="fas fa-print stat-icon"></i></div><div class="stat-value" id="statToPrint">0</div></div>
+            <div class="stat-card"><div class="stat-header"><span class="stat-title">In Progress</span><i class="fas fa-chart-line stat-icon"></i></div><div class="stat-value" id="statProgress">0</div></div>
+            <div class="stat-card"><div class="stat-header"><span class="stat-title">Completed</span><i class="fas fa-check-circle stat-icon"></i></div><div class="stat-value" id="statCompleted">0</div></div>
+        </div>
+        <div class="recent-orders">
+            <div class="section-title"><i class="fas fa-history" style="color:#f97316;"></i> Recent Orders</div>
+            <div id="recentOrdersList" class="orders-list"></div>
+        </div>
+    </div>
+
+    <!-- New Order Tab -->
+    <div id="tab-new" class="tab-content hidden">
+        <div class="new-order-form" style="background:rgba(15,25,35,0.8); backdrop-filter:blur(8px); border-radius:32px; padding:2rem;">
+            <div class="form-title" style="font-size:1.8rem; font-weight:700; margin-bottom:1.5rem; color:#f97316;"><i class="fas fa-pen-fancy"></i> Create New Order</div>
+            <form id="orderForm">
+                <div class="form-section">
+                    <div class="form-row" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr)); gap:1.2rem;">
+                        <div class="form-group"><label>Team/Customer</label><input type="text" id="customer" required></div>
+                        <div class="form-group"><label>Date Started</label><input type="date" id="dateStarted" readonly></div>
+                        <div class="form-group"><label>Date Wanted</label><input type="date" id="dateRelease"></div>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-group"><label>Fabric Type</label><select id="fabricSelect"></select></div>
+                        <div class="form-group"><label>Jersey Type</label><select id="jerseyTypeSelect"></select></div>
+                        <div class="form-group"><label>Lower Type</label><select id="lowerTypeSelect"></select></div>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h3 style="color:#f97316;">Garments Details</h3>
+                    <table class="garments-table">
+                        <thead>汽<th>Type</th><th>Surname</th><th>#</th><th>Upper Size</th><th>Lower Size</th><th>Notes</th><th></th> </thead>
+                        <tbody id="garmentsBody"></tbody>
+                       </table>
+                    <button type="button" class="add-row-btn" id="addGarmentBtn"><i class="fas fa-plus-circle"></i> Add Garment</button>
+                </div>
+
+                <!-- DESIGN IMAGE UPLOAD SECTION -->
+                <div class="form-section">
+                    <h3 style="color:#f97316;">Approved Design <i class="fas fa-image"></i></h3>
+                    <div class="image-upload-area">
+                        <input type="file" id="designImageInput" accept="image/jpeg,image/png,image/jpg" style="margin-bottom: 10px;">
+                        <div id="designImagePreview" class="image-preview"></div>
+                        <small style="color:#94a3b8;">Upload JPG/PNG (max 2MB). Will be stored with order.</small>
+                    </div>
+                </div>
+
+                <div class="totals-grid">
+                    <div class="total-item"><div class="total-label">PLAYERS</div><div class="total-value" id="totalPlayers">0</div></div>
+                    <div class="total-item"><div class="total-label">GARMENTS</div><div class="total-value" id="totalGarments">0</div></div>
+                    <div class="total-item"><div class="total-label">SUB TOTAL</div><div class="total-value" id="subTotal">₱0.00</div></div>
+                    <div class="total-item"><div class="total-label">DISCOUNT (₱)</div>
+                        <input type="number" id="discountAmount" value="0" step="0.01" style="width: 120px; background: #1e2a36; border: 1px solid #f97316; color: #fff; padding: 0.5rem; border-radius: 12px; text-align: center; margin-top: 0.5rem;">
+                    </div>
+                    <div class="total-item"><div class="total-label">TOTAL AFTER DISCOUNT</div><div class="total-value" id="totalPrice">₱0.00</div></div>
+                    <div class="total-item"><div class="total-label">BALANCE DUE</div><div class="total-value" id="balanceDue">₱0.00</div></div>
+                </div>
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-group"><label>Amount Paid</label><input type="number" id="amountPaid" value="0" step="0.01"></div>
+                        <div class="form-group"><label>Notes</label><textarea id="orderNotes" rows="2"></textarea></div>
+                    </div>
+                </div>
+                <div class="form-actions" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn-secondary" id="clearForm">Clear</button>
+                    <button type="submit" class="btn-primary">Submit Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- To Progress Tab (two sections) -->
+    <div id="tab-toprogress" class="tab-content hidden">
+        <div class="section-header"><h2 style="color:#fff;"><i class="fas fa-folder-open"></i> To File</h2></div>
+        <div id="tofileOrdersGrid" class="orders-grid"></div>
+        <div id="tofileEmpty" class="empty-state hidden">No orders in To File</div>
+
+        <div class="section-header" style="margin-top: 2rem;"><h2 style="color:#fff;"><i class="fas fa-print"></i> To Print</h2></div>
+        <div id="toprintOrdersGrid" class="orders-grid"></div>
+        <div id="toprintEmpty" class="empty-state hidden">No orders ready for printing</div>
+    </div>
+
+    <!-- In Progress Tab -->
+    <div id="tab-progress" class="tab-content hidden">
+        <div class="section-header"><h2 style="color:#fff;"><i class="fas fa-chart-line"></i> In Progress</h2></div>
+        <div id="progressOrdersGrid" class="orders-grid"></div>
+        <div id="progressEmpty" class="empty-state hidden">No orders in progress</div>
+    </div>
+
+    <!-- Completed Tab -->
+    <div id="tab-completed" class="tab-content hidden">
+        <div class="section-header"><h2 style="color:#fff;"><i class="fas fa-check-circle"></i> Completed Orders</h2></div>
+        <div id="completedOrdersGrid" class="orders-grid"></div>
+        <div id="completedEmpty" class="empty-state hidden">No completed orders</div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="tab-content hidden">
+        <div class="settings-panel" style="background:rgba(15,25,35,0.8); backdrop-filter:blur(8px); border-radius:32px; padding:2rem;">
+            <div class="section-header"><h2 style="color:#fff;">Price Settings</h2></div>
+            <div class="file-actions" style="display:flex; gap:1rem; margin-bottom:2rem;">
+                <button class="file-btn" id="resetDataBtn" style="background:#dc2626;">Reset All</button>
+            </div>
+            <div><h4 style="color:#f97316;">Fabric Types</h4><div id="fabricSettings"></div><button class="add-setting-btn" data-type="fabric">+ Add Fabric</button></div>
+            <div><h4 style="color:#f97316;">Jersey Types</h4><div id="jerseyTypeSettings"></div><button class="add-setting-btn" data-type="jerseyType">+ Add Jersey</button></div>
+            <div><h4 style="color:#f97316;">Lower Types</h4><div id="lowerTypeSettings"></div><button class="add-setting-btn" data-type="lowerType">+ Add Lower</button></div>
+            <div><h4 style="color:#f97316;">Garment Types</h4><div id="garmentTypeSettings"></div><button class="add-setting-btn" data-type="garmentType">+ Add Garment</button></div>
+            <button id="saveSettings" class="btn-primary">Save Settings</button>
+
+            <hr style="margin: 2rem 0; border-color: rgba(249,115,22,0.3);">
+            <div class="section-header"><h2 style="color:#fff;"><i class="fas fa-exchange-alt"></i> Team Data Management</h2></div>
+            <div class="team-actions" style="display:flex; gap:1rem; flex-wrap:wrap;">
+                <button class="file-btn" id="exportAllTeamsBtn"><i class="fas fa-download"></i> Export All Teams</button>
+                <button class="file-btn" id="importTeamOrdersBtn"><i class="fas fa-upload"></i> Import Team Orders</button>
+            </div>
+            <p style="margin-top:1rem; color:#94a3b8; font-size:0.8rem;">Import a team JSON file (exported from this system) to add orders. All orders will be added to their respective status tabs.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div id="orderModal" class="modal-overlay hidden"><div class="modal-content"><div class="modal-header"><h2 id="modalCustomer">Order Details</h2><span class="close-modal" id="closeModal">&times;</span></div><div class="modal-body" id="modalBody"></div><div class="modal-footer" style="margin-top:1.5rem; display:flex; gap:1rem; justify-content:flex-end;"><button class="btn-secondary" id="closeModalBtn">Close</button></div></div></div>
+<div id="editOrderModal" class="modal-overlay hidden"><div class="modal-content" style="max-width:1200px;"><div class="modal-header"><h2>✏️ Edit Order</h2><span class="close-modal" id="closeEditModal">&times;</span></div><div id="editOrderFormContainer"></div></div></div>
+
+<!-- Receipt Preview Modal -->
+<div id="receiptModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:800px;">
+        <div class="modal-header">
+            <h2>Receipt Preview</h2>
+            <span class="close-modal" id="closeReceiptModal">&times;</span>
+        </div>
+        <div id="receiptContent" style="background:white; border-radius:16px; overflow:auto; max-height:70vh;"></div>
+        <div class="modal-footer" style="margin-top:1rem; display:flex; gap:1rem; justify-content:flex-end;">
+            <button class="btn-secondary" id="downloadReceiptBtn">Download as JPG</button>
+            <button class="btn-secondary" id="closeReceiptModalBtn">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Right‑click context menu -->
+<div id="contextMenu" class="context-menu">
+    <div id="contextEdit" class="context-menu-item">✏️ Edit</div>
+    <div id="contextMoveToPrint" class="context-menu-item">🖨️ Move to Print</div>
+    <div id="contextMoveToProgress" class="context-menu-item">📈 Move to Progress</div>
+    <div id="contextMoveToCompleted" class="context-menu-item">✅ Move to Completed</div>
+    <div id="contextDeleteOrder" class="context-menu-item">🗑️ Delete Order</div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
